@@ -138,7 +138,6 @@ def simulate_adiabatic_process2(tlist, h_t, args, rho0, draw, options=Options())
     P_mat = np.zeros((len(tlist), M))
     psis = []
     idx = [0]
-
     def process_rho(tau, psi):
 
         # evaluate the Hamiltonian with gradually switched on interaction
