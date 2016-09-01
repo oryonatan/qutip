@@ -202,3 +202,39 @@ def simulate_adiabatic_process2(tlist, h_t, args, rho0, draw, options=Options())
         axes[1].legend(("Ground state",))
 
     return P_mat, evals_mat,psis
+
+
+def plot_operator(operator, vmin='not set', vmax='not set'):
+    if vmin == 'not set':
+            vmin = np.amin(np.real(operator.data.toarray()))
+    if vmax == 'not set':
+        vmax = np.amax(np.real(operator.data.toarray()))
+    
+    data = operator.data.toarray()
+    data = np.ma.masked_where(abs(data) < 0.00000001 , data)
+    cmap = plt.cm.nipy_spectral
+    cmap.set_bad(color='whitesmoke')
+    plt.imshow(np.real(data),
+               interpolation='nearest', vmin=vmin, vmax=vmax,cmap=cmap)
+    
+def plot_commutations(op1, op2, figsize=(15, 5)):
+    com = op1*op2-op2*op1
+    vmin = min(np.amin(np.real(op1.data.toarray())),
+            np.amin(np.real(op2.data.toarray())),
+            np.amin(np.real(com.data.toarray())))
+    vmax = max(np.amax(np.real(op1.data.toarray())),
+            np.amax(np.real(op2.data.toarray())),
+            np.amax(np.real(com.data.toarray())))
+    fig = plt.figure(figsize=figsize)
+    fig.suptitle("Real part only")
+    op1_plt = fig.add_subplot(1, 3, 1)
+    op1_plt.set_title("First Op")
+    plot_operator(op1, vmin=vmin, vmax=vmax)
+    op2_plt = fig.add_subplot(1, 3, 2)
+    op2_plt.set_title("Second Op")
+    plot_operator(op2, vmin=vmin, vmax=vmax)
+    com_plt = fig.add_subplot(1, 3, 3)
+    com_plt.set_title("Commutation relation")
+    plot_operator(op1*op2-op2*op1, vmin=vmin, vmax=vmax)
+    
+
