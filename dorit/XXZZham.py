@@ -1,5 +1,8 @@
-from LocalOperator import LocalOperator as LO
+from LH_tools import LocalOperator as LO
+import numpy as np
 import qutip
+
+
 _sx = qutip.sigmax()
 _sz = qutip.sigmaz()
 _ID = qutip.qeye(2)
@@ -49,7 +52,48 @@ class XXZZham:
             self.degree = degree
 
     def get_ham(self):
-        return qutip.Qobj(sum([term.get_oper(degree) for term in self.local_terms]))
+        return qutip.Qobj(sum([term.get_oper(self.degree) for term in self.local_terms]))
 
     def get_commuting_term_ham(self):
         return sum([term.get_commuting_form(self.degree) for term in self.local_terms])
+
+def rotate_to_00_base(oper):
+    """
+    Assumes matrix of size 2^(2n) where
+    rotatets to the a base where the first 2^n vectors are
+    {0,1}^n \tensor {0}^n
+    the second is 2^n vectors are
+    {0,1}^n \tensor {0}^(n-1)\tensor 1
+    ans so on
+    untill the laste 2^n vectors which are
+    {0,1}^n \tensor {1}^(n)
+    :param oper: operator to rotate
+    :return: rotated operator
+    """
+    space_size = oper.data.shape[0]
+    oper_ar = oper.data.toarray()
+    rotmat = np.zeros_like(oper_ar)
+    for i in range(space_size):
+        j = int((i % np.sqrt(space_size)) * np.sqrt(space_size) \
+                + np.floor(i / np.sqrt(space_size)))
+        rotmat[j][i] = 1
+    rotated = rotmat.conj().dot(oper_ar.dot(rotmat))
+    return qutip.Qobj(rotated)
+
+
+def add_high_energies(oper):
+    """
+    Assuming an operator is rotated to a "nice" base, I will add values to its diagonal in outside the small
+    top-leftsided box
+    :param oper:
+    :return:
+    """
+    space_size = oper.data.shape[0]
+    oper_ar = oper.data.toarray()
+    id_outside = np.identity(space_size)
+
+    small_box_size = int(np.sqrt(space_size))
+    id_outside[0:small_box_size, 0:small_box_size] = np.zeros((small_box_size, small_box_size))
+    big_value = 10000
+    oper_ar += id_outside * big_value
+    return qutip.Qobj(oper_ar)

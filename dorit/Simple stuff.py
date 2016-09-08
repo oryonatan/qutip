@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[33]:
+# In[1]:
 
 get_ipython().magic('matplotlib inline')
 
@@ -154,9 +154,42 @@ plt.figure(figsize=(8,8))
 plot_operator(H1.full_form(n)+H2.full_form(n)+H3.full_form(n))
 
 
-# In[31]:
+# In[4]:
 
-H1.full_form(n)
+H1 = LO.LocalOperator({1:sx,2:sx,3:ID})+LO.LocalOperator({1:sz,2:sz})
+H2 = LO.LocalOperator({2:sx,3:sx})+LO.LocalOperator({2:sz,3:sz})
+
+
+# In[6]:
+
+plot_commutations(H1,H2)
+
+
+# In[8]:
+
+H2
+
+
+# In[34]:
+
+H1*H2 -H2 * H1
+
+
+# In[59]:
+
+O = -2j*(LO.LocalOperator({1:sx,2:sy,3:sz})-LO.LocalOperator({1:sz,2:sy,3:sx}))
+plot_operator(O)
+plot_commutations(H1,H2)
+
+
+# In[39]:
+
+sx*sz - sz*sx
+
+
+# In[41]:
+
+sy
 
 
 # In[ ]:

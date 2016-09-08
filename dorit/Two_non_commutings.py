@@ -3,7 +3,6 @@
 
 # In[12]:
 
-get_ipython().magic('matplotlib inline')
 
 
 from IPython.display import Image,display

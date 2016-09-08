@@ -10,6 +10,8 @@ from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 
+from qutip import Qobj
+
 
 def s_function(t, N=1024, epsilon=0.1):
     """Computes the rate function s(t)"""
@@ -138,6 +140,7 @@ def simulate_adiabatic_process2(tlist, h_t, args, rho0, draw, options=Options())
     P_mat = np.zeros((len(tlist), M))
     psis = []
     idx = [0]
+
     def process_rho(tau, psi):
 
         # evaluate the Hamiltonian with gradually switched on interaction
@@ -153,11 +156,11 @@ def simulate_adiabatic_process2(tlist, h_t, args, rho0, draw, options=Options())
         idx[0] += 1
 
     output = qutip.sesolve(H=h_t,
-                     rho0=rho0,
-                     tlist=tlist,
-                     e_ops=process_rho,
-                     args=args,
-                     options=options)
+                           rho0=rho0,
+                           tlist=tlist,
+                           e_ops=process_rho,
+                           args=args,
+                           options=options)
     # rc('font', family='serif')
     # rc('font', size='10')
     if draw:
@@ -201,30 +204,31 @@ def simulate_adiabatic_process2(tlist, h_t, args, rho0, draw, options=Options())
                           "eigenstates for a chain of %d spins" % N)
         axes[1].legend(("Ground state",))
 
-    return P_mat, evals_mat,psis
+    return P_mat, evals_mat, psis
 
 
 def plot_operator(operator, vmin='not set', vmax='not set'):
     if vmin == 'not set':
-            vmin = np.amin(np.real(operator.data.toarray()))
+        vmin = np.amin(np.real(operator.data.toarray()))
     if vmax == 'not set':
         vmax = np.amax(np.real(operator.data.toarray()))
-    
+
     data = operator.data.toarray()
-    data = np.ma.masked_where(abs(data) < 0.00000001 , data)
+    data = np.ma.masked_where(abs(data) < 0.00000001, data)
     cmap = plt.cm.nipy_spectral
     cmap.set_bad(color='whitesmoke')
     plt.imshow(np.real(data),
-               interpolation='nearest', vmin=vmin, vmax=vmax,cmap=cmap)
-    
+               interpolation='nearest', vmin=vmin, vmax=vmax, cmap=cmap)
+
+
 def plot_commutations(op1, op2, figsize=(15, 5)):
-    com = op1*op2-op2*op1
+    com = op1 * op2 - op2 * op1
     vmin = min(np.amin(np.real(op1.data.toarray())),
-            np.amin(np.real(op2.data.toarray())),
-            np.amin(np.real(com.data.toarray())))
+               np.amin(np.real(op2.data.toarray())),
+               np.amin(np.real(com.data.toarray())))
     vmax = max(np.amax(np.real(op1.data.toarray())),
-            np.amax(np.real(op2.data.toarray())),
-            np.amax(np.real(com.data.toarray())))
+               np.amax(np.real(op2.data.toarray())),
+               np.amax(np.real(com.data.toarray())))
     fig = plt.figure(figsize=figsize)
     fig.suptitle("Real part only")
     op1_plt = fig.add_subplot(1, 3, 1)
@@ -235,6 +239,92 @@ def plot_commutations(op1, op2, figsize=(15, 5)):
     plot_operator(op2, vmin=vmin, vmax=vmax)
     com_plt = fig.add_subplot(1, 3, 3)
     com_plt.set_title("Commutation relation")
-    plot_operator(op1*op2-op2*op1, vmin=vmin, vmax=vmax)
-    
+    plot_operator(op1 * op2 - op2 * op1, vmin=vmin, vmax=vmax)
+
+
+class LocalOperator:
+    def __init__(self, dict_of_ops):
+        # list of 1 qubit ops and indexes of the shape (op, i)
+        # for example {1:sigmaz(), 5: sigmax(), 10:hadamard()}
+        self.dict_of_ops = dict_of_ops
+        self.update_d()
+
+    def update_d(self):
+        if len(self.dict_of_ops) == 0:
+            self.d = 0
+        else:
+            self.d = max(self.dict_of_ops.keys())
+
+    def full_form(self, n=None):
+        if n == None: n = self.d
+
+        full_list = []
+        for i in range(1, n + 1):
+            if i in self.dict_of_ops.keys():
+                full_list.append(self.dict_of_ops[i])
+            else:
+                full_list.append(qeye(2))
+        return tensor(full_list)
+
+    def tensor(self, other):
+        # new is copy of old
+        new = LocalOperator(self.dict_of_ops.copy())
+        for index, op in other.dict_of_ops.items():
+            if index in new.dict_of_ops.keys():
+                new.dict_of_ops[index] *= other.dict_of_ops[index]
+            else:
+                new.dict_of_ops[index] = other.dict_of_ops[index]
+        new.update_d()
+        return new
+
+    def __mul__(self, other):
+        return self.tensor(other)
+
+    def force_d(self, degree):
+        new = LocalOperator(self.dict_of_ops.copy())
+        if degree not in new.dict_of_ops.keys():
+            new.dict_of_ops[degree] = qeye(2)
+            new.update_d()
+        return new
+
+    def __sub__(self, other):
+        deg = max(self.d, other.d)
+        return self.full_form(deg) - other.full_form(deg)
+        # new = LocalOperator(self.dict_of_ops.copy())
+        # if (sorted(self.dict_of_ops.keys()) !=
+        #         sorted(other.dict_of_ops.keys())):
+        #     raise TypeError('Local operator operate on different qubits')
+        #
+        # for index, op in other.dict_of_ops.items():
+        #     new.dict_of_ops[index] -= other.dict_of_ops[index]
+        #
+        # new.dict_of_ops = {x: y for (x, y) in new.dict_of_ops.items() if y.norm() != 0}
+        # new.update_d()
+        # return new
+
+    def __add__(self, other):
+        deg = max(self.d, other.d)
+        return self.full_form(deg) + other.full_form(deg)
+
+        # if (sorted(self.dict_of_ops.keys()) !=
+        #         sorted(other.dict_of_ops.keys())):
+        #     raise TypeError('Local operator operate on different qubits')
+        #
+        # for index, op in other.dict_of_ops.items():
+        #     new.dict_of_ops[index] += other.dict_of_ops[index]
+        #
+        # new.dict_of_ops = {x: y for (x, y) in new.dict_of_ops.items() if y.norm() != 0}
+        # new.update_d()
+        # return new
+
+    def norm(self):
+        if self.d == 0: return 0
+        ret = 1
+        for op in self.dict_of_ops.values():
+            ret *= op.norm()
+        return ret
+
+    def __repr__(self):
+        return str(self.dict_of_ops)
+
 
