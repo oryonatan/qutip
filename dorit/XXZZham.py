@@ -2,7 +2,6 @@ from LH_tools import LocalOperator as LO
 import numpy as np
 import qutip
 
-
 _sx = qutip.sigmax()
 _sz = qutip.sigmaz()
 _ID = qutip.qeye(2)
@@ -57,6 +56,7 @@ class XXZZham:
     def get_commuting_term_ham(self):
         return sum([term.get_commuting_form(self.degree) for term in self.local_terms])
 
+
 def rotate_to_00_base(oper):
     """
     Assumes matrix of size 2^(2n) where
@@ -78,10 +78,10 @@ def rotate_to_00_base(oper):
                 + np.floor(i / np.sqrt(space_size)))
         rotmat[j][i] = 1
     rotated = rotmat.conj().dot(oper_ar.dot(rotmat))
-    return qutip.Qobj(rotated)
+    return qutip.Qobj(rotated, dims=oper.dims)
 
 
-def add_high_energies(oper):
+def add_high_energies(oper, big_value):
     """
     Assuming an operator is rotated to a "nice" base, I will add values to its diagonal in outside the small
     top-leftsided box
@@ -94,6 +94,5 @@ def add_high_energies(oper):
 
     small_box_size = int(np.sqrt(space_size))
     id_outside[0:small_box_size, 0:small_box_size] = np.zeros((small_box_size, small_box_size))
-    big_value = 10000
     oper_ar += id_outside * big_value
-    return qutip.Qobj(oper_ar)
+    return qutip.Qobj(oper_ar, dims=oper.dims)

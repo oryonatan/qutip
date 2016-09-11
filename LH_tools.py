@@ -63,10 +63,10 @@ def benchmark(h_t, in_state, steps=100, T=100):
     start_time = time.time()
     tlist = np.linspace(0, T, steps)
     args = {'t_max': max(tlist)}
-    P_mat, evals_mat = simulate_adiabatic_process2(tlist, h_t, args, in_state, False)
+    P_mat, evals_mat, psis = simulate_adiabatic_process2(tlist, h_t, args, in_state, False)
     plot_PandEV(P_mat, evals_mat, tlist)
     print("Computation time %s seconds :" % (time.time() - start_time))
-    return P_mat, evals_mat, time.time() - start_time
+    return P_mat, evals_mat, psis, time.time() - start_time
 
 
 def plot_PandEV(P_mat, EV_mat, tlist, figsize=(15, 5)):
@@ -326,5 +326,3 @@ class LocalOperator:
 
     def __repr__(self):
         return str(self.dict_of_ops)
-
-
