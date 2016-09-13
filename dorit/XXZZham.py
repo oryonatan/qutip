@@ -15,6 +15,8 @@ class XXZZ_term:
         :param j: second index (must be j>i)
         :param a: coefficient
         """
+
+
         if i >= j:
             raise ValueError("i must be strictly smaller than j")
         self.i = i
