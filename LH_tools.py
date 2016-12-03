@@ -74,6 +74,7 @@ def plot_PandEV(P_mat, EV_mat, tlist, figsize=(15, 5)):
     P_plt = fig.add_subplot(1, 2, 1)
     P_plt.set_title("Occupation probabilities")
     P_plt.plot(tlist, P_mat)
+    P_plt.set_ylim(0, 1.1)
     ev_plt = fig.add_subplot(1, 2, 2)
     ev_plt.set_title("Eigenvalues")
     ev_plt.plot(tlist, EV_mat)

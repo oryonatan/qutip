@@ -1,6 +1,7 @@
 from qutip import *
 import numpy as np
 from scipy.linalg import expm
+from tqdm import tnrange,tqdm_notebook
 
 
 def sim_simple_adiabatic(tlist, H0, H1, s='linear'):
@@ -10,7 +11,7 @@ def sim_simple_adiabatic(tlist, H0, H1, s='linear'):
     :param H0: first hamiltonian
     :param H1: second hamiltonian
     :param s: function - relates time to coupling, default is linear dependecy
-    :return:
+    :return: P_mat, eigvals_mat, psis
     """
     if s == 'linear':
         s = lambda t: (t - tmin) / (tmax - tmin)
@@ -47,7 +48,7 @@ def sim_simple_adiabatic(tlist, H0, H1, s='linear'):
 def sim_noise_evolutoion(tlist, H0, H1, H3, noise_func):
     """
     Simulates a constant rate evolution with an addition a 'noise' H3 term that is controlled
-    by an s function, s.t. 
+    by an s function, s.t.
     H(t) = H1 * (tmax-t)/(tmax-tmin)) + H2 * (t-tmin)/(tmax-tmin)) + H3*s(t)
     :param tlist: Time list
     :param H0: first hamiltonian
@@ -110,7 +111,280 @@ def step_is_good(H0, H1, psi, step_size, t, max_time, target_p0):
     return (pdiff * (max_time - t) / step_size) <= target_p0
 
 
-def sim_dynamic_evolution_binsearch(H0, H1, target_p0=0.3):
+def sim_dynamic_evolution_tight_deriviative(H0, H1, epsilon=0.3):
+    eigvals, eigvecs = H0.eigenstates(eigvals=2)
+    slist = []
+    max_time = 39
+    step_size = 1
+    t = 0
+    psi = eigvecs[0]
+    psis = [psi]
+    s = 0
+    for t in range(max_time):
+        slist.append(s)
+        eigvals, eigvecs = H0.eigenstates(eigvals=2)
+        gap = eigvals[1] - eigvals[0]
+        if gap < 0:
+            raise ValueError("EV0 should be lower than EV1")
+        overlap_01 = eigvecs[0].overlap(eigvecs[1])
+        ds = epsilon * gap ** 2 / np.abs(overlap_01)
+        s = s + ds
+        # evolve psi
+        Ht = H0 * (1 - s) + H1 * s
+        U = expm(-1j * Ht.data * step_size)
+        psi = Qobj(U * psi.data, dims=psi.dims)
+        psis.append(psi)
+    slist.append(s)
+    return slist, psis
+
+
+    # while t < max_time:
+    #     s = t / max_time
+    #     Ht = H0 * (1 - s) + H1 * s
+    #     eigvals, eigvecs = H0.eigenstates(eigvals=2)
+    #     gap = eigvals[1] - eigvals[0]
+    #     if gap < 0:
+    #         raise ValueError("EV0 should be lower than EV1")
+    #     overlap_01 = eigvecs[0].overlap(eigvecs[1])
+    #     dt = epsilon * gap ** 2 / np.abs(overlap_01)
+    #     psi = evolve(H0, H1, psi, ds, s, max_time)
+    #     psis.append(psi)
+    #     t = t + dt
+    #     tlist.append(s)
+    # return tlist, psis
+
+
+def find_ds_and_evolve_psi(psi, H0, H1, target_p0, dt, s, process_precentage, linearization_factor=1):
+    # Binary search for maximal ds
+    max_search_depth = 10
+    search_depth = 1
+    first_legal_s = s
+    end_of_search_space = 1
+    while search_depth <= max_search_depth:
+        search_space = end_of_search_space - first_legal_s
+        ds = search_space / 2
+        if s_step_is_good(psi, H0, H1, first_legal_s, ds, dt, target_p0, process_precentage):
+            search_depth += 1
+            first_legal_s += ds
+        else:
+            search_depth += 1
+            end_of_search_space = first_legal_s + ds
+    ds = first_legal_s - s
+    # TODO: check if  s_evolve_linear_approximation behaves exactly a s_evolve when  linearization_factor=1
+    if linearization_factor > 1:
+        return s_evolve_linear_approximation(psi, H0, H1, s, ds, dt, linearization_factor)
+    return s_evolve(psi, H0, H1, s, ds, dt)
+
+
+def s_step_is_good(psi, H0, H1, s, ds, dt, target_p0, process_precentage):
+    _, pr_psi, _, _, _, _ = s_evolve(psi, H0, H1, s, ds, dt)
+    if (1 - pr_psi[0]) / process_precentage <= target_p0:
+        return True
+    else:
+        return False
+
+
+def s_evolve(psi, H0, H1, s, ds, dt):
+    s_new = s + ds
+    Ht = H0 * (1 - s_new) + H1 * s_new
+    eigvals, eigvecs = Ht.eigenstates(eigvals=2)
+    # Evolve
+    U = expm(-1j * Ht.data * dt)
+    psi = Qobj(U * psi.data, dims=psi.dims)
+    # Compute projection
+    pr_psi = [np.abs(eigvecs[0].overlap(psi)) ** 2,
+              np.abs(eigvecs[1].overlap(psi)) ** 2]
+    return psi, pr_psi, Ht, ds, eigvals, eigvecs
+
+
+def s_evolve2(psi, H0, H1, s, ds, dt, eigvals_to_show=2) -> (Qobj, float, Qobj, [Qobj], [Qobj]):
+    """
+
+    :param psi:
+    :param H0:
+    :param H1:
+    :param s:
+    :param ds:
+    :param dt:
+    :return: psi, pr_psi, Ht, eigvals, eigvecs
+    """
+    s_new = s + ds
+    Ht = H0 * (1 - s_new) + H1 * s_new
+    eigvals, eigvecs = Ht.eigenstates(eigvals=eigvals_to_show)
+    # Evolve
+    U = expm(-1j * Ht.data * dt)
+    psi = Qobj(U * psi.data, dims=psi.dims)
+    # Compute projection
+    pr_psi = np.abs(eigvecs[0].overlap(psi)) ** 2
+    return psi, pr_psi, Ht, eigvals, eigvecs
+
+
+def s_evolve_linear_approximation(psi, H0, H1, s_init, ds, dt, linearization_factor):
+    s_new = s_init + ds
+
+    list_of_s = np.linspace(s_init, s_new, linearization_factor)
+    for s in list_of_s:
+        Ht = H0 * (1 - s) + H1 * s
+        # Evolve
+        U = expm(-1j * Ht.data * dt / linearization_factor)
+        psi = Qobj(U * psi.data, dims=psi.dims)
+
+    # Compute projection on the last hamiltonian
+    eigvals, eigvecs = Ht.eigenstates(eigvals=2)
+    pr_psi = [np.abs(eigvecs[0].overlap(psi)) ** 2,
+              np.abs(eigvecs[1].overlap(psi)) ** 2]
+    return psi, pr_psi, Ht, ds, eigvals, eigvecs
+
+
+def sim_dynamic_evolution_binsearch2(H0, H1, target_p0, max_time, dt, linearization_factor=1):
+    eigvals, eigvecs = H0.eigenstates(eigvals=2)
+    psi = eigvecs[0]
+    psis = [psi]
+    slist = [0]
+    pr_list = [(1, 0)]
+    ev_list = [eigvals]
+    s = 0
+    # Define per step error bound , this might also work with a global error bound, however this is simpler
+    max_error_per_step = 1 / 2 * target_p0 / (max_time / dt)
+    total_number_of_steps = len(range(0, max_time, dt))
+    for step_count, t in enumerate(tnrange(0, max_time, dt)):
+        # find appropriate ds and evolve with ds
+        if s >= 1 - 1 / (total_number_of_steps * 100):
+            slist.append(1)
+            print("Saturated at t = %s , stopping evolution" % t)
+            psi, pr_psi, Ht, ds, eigvals, evecs = s_evolve(psi, H0, H1, s, 1 - s, dt)
+        else:
+            psi, pr_psi, Ht, ds, eigvals, evecs = \
+                find_ds_and_evolve_psi(psi,
+                                       H0, H1,
+                                       target_p0,
+                                       dt,
+                                       s,
+                                       (step_count + 1) / total_number_of_steps,
+                                       linearization_factor)
+            s = s + ds
+            psis.append(psi)
+            slist.append(s)
+            pr_list.append(pr_psi)
+            ev_list.append(eigvals)
+    return psis, slist, pr_list, ev_list
+
+
+def sim_dynamic_evolution_binsearch3(H0, H1, target_p0, dt, linearization_factor=1, max_depth=10, eigvals_to_show=2) \
+        -> ([Qobj], [float], [float], [float]):
+    """
+
+    :param H0:
+    :param H1:
+    :param target_p0:
+    :param dt:
+    :param linearization_factor:
+    :param max_depth:
+    :param eigvals_to_show:
+    :return:
+    """
+    eigvals, eigvecs = H0.eigenstates(eigvals=eigvals_to_show)
+    psi = eigvecs[0]
+    psis = [psi]
+    slist = [0]
+    pr_list = [1]
+    ev_list = [eigvals]
+    s = 0
+    time_rounding = 0.01
+    first_step = True
+    with tqdm_notebook(total=100,desc = "progress of s") as progress_bar:
+        while (s < 1 - time_rounding):
+            search_range = 1-s
+            s0 = s
+            for i in range(max_depth):
+                d2s = search_range / (2 ** (i + 1))
+                phi, pr_phi, _, _, _ = s_evolve2(psi, H0, H1, s0, s-s0 + d2s, dt)
+                if (((1 - pr_phi) / (s + d2s)) * (1 + first_step)) < target_p0:
+                    s += d2s
+                else:
+                    continue
+            first_step = False
+            if s==s0 :
+                s += d2s
+            progress_bar.update(int(100 * (s-s0)))
+            psi, pr_psi, _, eigvals, _ = s_evolve2(psi, H0, H1, s0, s-s0 + d2s, dt, eigvals_to_show)
+            psis.append(psi)
+            slist.append(s)
+            pr_list.append(pr_psi)
+            ev_list.append(eigvals)
+        ds = 1 - s
+        psi, pr_psi, _, eigvals, _ = s_evolve2(psi, H0, H1, s, ds, dt, eigvals_to_show)
+        psis.append(psi)
+        slist.append(1)
+        pr_list.append(pr_psi)
+        ev_list.append(eigvals)
+
+
+    return psis, slist, pr_list, ev_list
+
+
+def sim_dynamic_evolution_baf3(H0, H1, target_p0, dt, linearization_factor=1, max_depth=10, eigvals_to_show=2) \
+        -> ([Qobj], [float], [float], [float]):
+    """
+
+    :param H0:
+    :param H1:
+    :param target_p0:
+    :param dt:
+    :param linearization_factor:
+    :param max_depth:
+    :param eigvals_to_show:
+    :return:
+    """
+    eigvals, eigvecs = H0.eigenstates(eigvals=eigvals_to_show)
+    psi = eigvecs[0]
+    psis = [psi]
+    slist = [0]
+    pr_list = [1]
+    ev_list = [eigvals]
+    s = 0
+    time_rounding = 0.01
+    forward_prop = qeye(H0.dims[0]).data
+    back_prop = qeye(H0.dims[0]).data
+    first_step = True
+
+    with tqdm_notebook(total=100,desc = "progress of s") as progress_bar:
+        while (s < 1 - time_rounding):
+            search_range = 1-s
+            s0 = s
+            for i in range(max_depth):
+                d2s = search_range / (2 ** (i + 1))
+                phi, pr_phi, _, _, _,_,_ = \
+                    s_evolve_baf3(psi, H0, H1, eigvecs, s0, s - s0 + d2s, dt, forward_prop, back_prop)
+
+                if (((1 - pr_phi) / (s + d2s)) * (1 + first_step)) < target_p0:
+                    s += d2s
+                else:
+                    continue
+            first_step = False
+
+            if s==s0 :
+                s += d2s
+
+            progress_bar.update(int(100 * (s-s0)))
+            psi, pr_psi, _, eigvals, _,forward_prop,back_prop = \
+                s_evolve_baf3(psi, H0, H1, eigvecs, s0, s - s0 + d2s, dt, forward_prop, back_prop,eigvals_to_show)
+            psis.append(psi)
+            slist.append(s)
+            pr_list.append(pr_psi)
+            ev_list.append(eigvals)
+        ds = 1 - s
+        psi, pr_psi, _, eigvals, _ = s_evolve2(psi, H0, H1, s, ds, dt, eigvals_to_show)
+        psis.append(psi)
+        slist.append(1)
+        pr_list.append(pr_psi)
+        ev_list.append(eigvals)
+        print(s)
+
+    return psis, slist, pr_list, ev_list
+
+
+def sim_dynamic_evolution_binsearch(H0, H1, target_p0=0.1):
     eigvals, eigvecs = H0.eigenstates(eigvals=2)
     tlist = []
     max_time = 39
@@ -158,6 +432,7 @@ def sim_dynamic_evolution_binsearch(H0, H1, target_p0=0.3):
                     tlist.append(t)
                 step_size = half_step
     return tlist
+
 
 #
 # def sim_dynamic_evolution_pc(H0, H1, target_p0=0.4):
@@ -249,3 +524,365 @@ def sim_dynamic_evolution_binsearch(H0, H1, target_p0=0.3):
 #
 #     psi = evolve(psi, H_0, H_1, t)
 #     return tlist, psi
+
+
+
+def sim_degenerateGS_adiabatic(tlist, H0, H1, s='linear'):
+    """
+    :param tlist: Time list
+    :param H0: first hamiltonian
+    :param H1: second hamiltonian
+    :param s: function - relates time to coupling, default is linear dependecy
+    :return:
+    """
+    print("Assuming degenrate GS, running this function on an Hamiltonian without degeneracy will result in wrong"
+          "probabilities.")
+    if s == 'linear':
+        s = lambda t: (t - tmin) / (tmax - tmin)
+    duration = len(tlist)
+    tmin = min(tlist)
+    tmax = max(tlist)
+    # start at H0 ground state
+    eigvals, eigvecs = H0.eigenstates(eigvals=10)
+    print(eigvals)
+    P_mat = []
+    eigvals_mat = []
+    psi = eigvecs[0]
+    psis = [psi]
+    eigvals_mat.append(eigvals)
+
+    P_mat.append(
+        [abs(eigvecs[0].overlap(psi)) ** 2,
+         abs(eigvecs[1].overlap(psi)) ** 2])
+    oldt = tmin
+    for t in tlist[1:]:
+        dt = oldt - t
+        Ht = H0 * (1 - s(t)) + H1 * (s(t))
+        # Assume 2-degenerate-GS , we should maximize overlap on the first two eigeinstates.
+        eigvals, eigvecs = Ht.eigenstates(eigvals=10)
+        print(eigvals)
+
+        U = expm(-1j * Ht.data * dt)
+        psi = Qobj(U * psi.data, dims=psi.dims)
+        psis.append(psi)
+        eigvals_mat.append(eigvals)
+        # Take max on the degenrate GS
+        P_mat.append(
+            [max(abs(psi.overlap(eigvecs[0])) ** 2,
+                 abs(psi.overlap(eigvecs[1])) ** 2),
+             abs(eigvecs[2].overlap(psi)) ** 2])
+        oldt = t
+    return P_mat, eigvals_mat, psis
+
+
+def sim_dynamic_evolution_binsearch_back_and_forth(H0, H1, target_p0, max_time, dt, linearization_factor=1):
+    import sys
+
+    eigvals, eigvecs = H0.eigenstates(eigvals=2)
+    psi = eigvecs[0]
+    psi0 = eigvecs[0]
+    psis = [psi]
+    slist = [0]
+    pr_list = [(1, 0)]
+    ev_list = [eigvals]
+    s = 0
+    forward_prop = qeye(H0.dims[0]).data
+    back_prop = qeye(H0.dims[0]).data
+
+    # Define per step error bound , this might also work with a global error bound, however this is simpler
+    max_error_per_step = 1 / 2 * target_p0 / (max_time / dt)
+    tlist = np.linspace(0, max_time, max_time / dt)
+    total_number_of_steps = len(tlist)
+    for step_count, t in enumerate(tlist):
+        # find appropriate ds and evolve with ds
+        if s >= 1 - 1 / (total_number_of_steps * 100):
+            slist.append(1)
+            print("Saturated at t = %s , stopping evolution" % t)
+            psi, pr_psi, Ht, ds, eigvals, evecs = s_evolve_linear_approximation(psi, H0, H1, s, 1 - s, dt,
+                                                                                linearization_factor)
+        else:
+            psi, pr_psi, Ht, ds, eigvals, evecs, forward_prop, back_prop = \
+                find_ds_and_evolve_back_and_forth(forward_prop, back_prop,
+                                                  psi0, psi,
+                                                  H0, H1, eigvecs,
+                                                  target_p0,
+                                                  dt,
+                                                  s,
+                                                  (step_count + 1) / total_number_of_steps,
+                                                  linearization_factor)
+            s = s + ds
+            psis.append(psi)
+            slist.append(s)
+            pr_list.append(pr_psi)
+            ev_list.append(eigvals)
+    return psis, slist, pr_list, ev_list
+
+
+def find_ds_and_evolve_back_and_forth(forward_prop, back_prop, psi0, psi, H0, H1, H0_eigvecs, target_p0, dt, s,
+                                      process_precentage,
+                                      linearization_factor=1):
+    """
+
+    :param forward_prop:
+    :param back_prop:
+    :param psi0:
+    :param psi:
+    :param H0:
+    :param H1:
+    :param H0_eigvecs:
+    :param target_p0:
+    :param dt:
+    :param s:
+    :param process_precentage:
+    :param linearization_factor:
+    :return:
+    """
+    # Binary search for maximal ds
+    max_search_depth = 10
+    search_depth = 1
+    first_legal_s = s
+    end_of_search_space = 1
+    while search_depth <= max_search_depth:
+        search_space = end_of_search_space - first_legal_s
+        ds = search_space / 2
+
+        if s_step_is_good_baf(forward_prop, back_prop, psi0, psi, H0, H1, H0_eigvecs, first_legal_s, ds, dt, target_p0,
+                              process_precentage):
+            search_depth += 1
+            first_legal_s += ds
+        else:
+            search_depth += 1
+            end_of_search_space = first_legal_s + ds
+    ds = first_legal_s - s
+    # TODO: check if  s_evolve_linear_approximation behaves exactly a s_evolve when  linearization_factor=1
+    # if linearization_factor > 1:
+    #     return s_evolve_linear_approximation(psi, H0, H1, s, ds, dt, linearization_factor)
+
+    return s_evolve_baf(psi, H0, H1, H0_eigvecs, s, ds, dt, forward_prop, back_prop)
+
+
+def s_step_is_good_baf(forward_prop, back_prop, psi0, psi, H0, H1, H0_eigvecs, s, ds, dt, target_p0,
+                       process_precentage):
+    _, pr_psi, _, _, _, _, forward_prop, back_prop = s_evolve_baf(psi, H0, H1, H0_eigvecs, s, ds, dt, forward_prop,
+                                                                  back_prop)
+
+    if (1 - pr_psi[0]) / process_precentage <= target_p0:
+        return True
+    else:
+        return False
+
+
+def s_evolve_baf(psi, H0, H1, H0_eigvecs, s, ds, dt, forward_prop, back_prop):
+    """
+
+    :param psi:
+    :param H0:
+    :param H1:
+    :param H0_eigvecs:
+    :param s:
+    :param ds:
+    :param dt:
+    :param forward_prop:
+    :param back_prop:
+    :return:
+    """
+    s_new = s + ds
+    Ht = H0 * (1 - s_new) + H1 * s_new
+    eigvals, eigvecs = Ht.eigenstates(eigvals=2)
+    # Evolve
+    U = expm(-1j * Ht.data * dt)
+    forward_prop = U * forward_prop
+    # TODO: is this the correct back-propegator?
+    # TODO: should I use np.matrix(U).getH() ?
+    back_prop = back_prop * U
+    psi = Qobj(U * psi.data, dims=psi.dims)
+    # Compute projection after back-and-forth process
+    reversed_psi = Qobj(back_prop * psi.data, dims=psi.dims)
+    pr_psi = [np.abs(H0_eigvecs[0].overlap(reversed_psi)) ** 2,
+              np.abs(H0_eigvecs[1].overlap(reversed_psi)) ** 2]
+    import pydevd;
+    # pydevd.settrace('localhost', port=4000, stdoutToServer=True, stderrToServer=True)
+    return psi, pr_psi, Ht, ds, eigvals, eigvecs, forward_prop, back_prop
+
+
+def s_evolve_baf3(psi, H0, H1, H0_eigvecs, s, ds, dt, forward_prop, back_prop,eigvals_to_show=2):
+    """
+
+    :param psi:
+    :param H0:
+    :param H1:
+    :param H0_eigvecs:
+    :param s:
+    :param ds:
+    :param dt:
+    :param forward_prop:
+    :param back_prop:
+    :return:
+    """
+    s_new = s + ds
+    Ht = H0 * (1 - s_new) + H1 * s_new
+    eigvals, eigvecs = Ht.eigenstates(eigvals=eigvals_to_show)
+    # Evolve
+    U = expm(-1j * Ht.data * dt)
+    forward_prop = U * forward_prop
+    back_prop = back_prop * U
+    psi = Qobj(U * psi.data, dims=psi.dims)
+    # Compute projection after back-and-forth process
+    reversed_psi = Qobj(back_prop * psi.data, dims=psi.dims)
+    pr_psi = np.abs(H0_eigvecs[0].overlap(reversed_psi)) ** 2
+    import pydevd;
+    return psi, pr_psi, Ht, eigvals, eigvecs, forward_prop, back_prop
+
+
+"""Gaussian noise
+
+Ill work with the gaussian 2.5*e^(-(x-5)^2/2) /(sqrt(2*pi) ), it is centered around 5 with std of 1 and achieves ~0.997
+at 5, thus making it easy to work with on 10 steps process
+"""
+
+
+def sim_dynamic_evolution_gauss_noise(H0, H1, target_p0, max_time, dt):
+    eigvals, eigvecs = H0.eigenstates(eigvals=2)
+    psi = eigvecs[0]
+    psis = [psi]
+    pr_list = [(1, 0)]
+    ev_list = [eigvals]
+    total_number_of_steps = len(range(0, max_time, dt))
+    Hnoise = rand_herm(H0.shape[0], dims=H0.dims)
+
+    # # TODO: remove debug
+    # #
+    # import pydevd
+    # from  importlib import reload
+    # reload(pydevd)
+    # pydevd.settrace('localhost', port=4000, stdoutToServer=True, stderrToServer=True)
+
+    for step_count, t in enumerate(tnrange(0, max_time, dt)):
+        psi, pr_psi, eigvals, evecs = \
+            find_rate_and_evolve_psi_with_noise(psi,
+                                                H0, H1,
+                                                target_p0,
+                                                t, dt, max_time,
+                                                (step_count + 1) / total_number_of_steps,
+                                                Hnoise)
+        psis.append(psi)
+        pr_list.append(pr_psi)
+        ev_list.append(eigvals)
+
+    return psis, pr_list, ev_list
+
+
+def find_rate_and_evolve_psi_with_noise(psi, H0, H1, target_p0, t, dt, tmax, process_precentage, Hnoise):
+    """
+     Binary search for maximal ds, we ignore the found ds and actually evolve with dt
+     the ds factor is only used to compute the rate ds/dt, which will be used as an indicator to the wanted noise volume
+    :param psi:
+    :param H0:
+    :param H1:
+    :param target_p0:
+    :param t:
+    :param dt:
+    :param tmax:
+    :param process_precentage:
+    :param Hnoise:
+    :return:
+    """
+    s = t / tmax
+    max_search_depth = 10
+    search_depth = 1
+    first_legal_s = s
+    end_of_search_space = 1
+    while search_depth <= max_search_depth:
+        search_space = end_of_search_space - first_legal_s
+        ds = search_space / 2
+        if s_step_is_good(psi, H0, H1, first_legal_s, ds, dt, target_p0, process_precentage):
+            search_depth += 1
+            first_legal_s += ds
+        else:
+            search_depth += 1
+            end_of_search_space = first_legal_s + ds
+
+    # TODO: add in all the implementations - we need to solve the case where ds was not found, and set minimal ds to be
+    # 1/2^max_search_depth
+
+    ds = max(first_legal_s - s, 1 / 2 ** max_search_depth)
+    noise_power_constant = 1 / 250
+
+    rate = min(dt / tmax / ds * noise_power_constant, 1000)
+    # print("ds:%s rate:%s" % (ds, rate))
+    return evolve_gaussian_noise(psi, H0, H1, t, dt, tmax, Hnoise, noise_volume=rate)
+
+
+def evolve_gaussian_noise(psi, H0, H1, t_init, dt, tmax, Hnoise, noise_volume):
+    t_new = t_init + dt
+
+    gauss = lambda x: 2.5 * np.exp(-(x - 5) ** 2 / 2) / (np.sqrt(2 * np.pi))
+    steps = 10
+    list_of_s = np.linspace(t_init, t_new, steps) / tmax
+
+    for x, s in enumerate(list_of_s):
+        Ht = H0 * (1 - s) + H1 * s + gauss(x) * Hnoise * noise_volume
+        # Evolve
+        U = expm(-1j * Ht.data * dt / steps)
+        psi = Qobj(U * psi.data, dims=psi.dims)
+    # Compute projection
+    eigvals, eigvecs = Ht.eigenstates(eigvals=2)
+
+    pr_psi = [np.abs(eigvecs[0].overlap(psi)) ** 2,
+              np.abs(eigvecs[1].overlap(psi)) ** 2]
+    return psi, pr_psi, eigvals, eigvecs
+
+
+"""
+Degeneracy evolution
+"""
+PRECISION = 2 ** -40
+
+
+def sim_degenerate_adiabatic(tlist, H0: qobj, H1: qobj, psi0: qobj):
+    """
+
+    :param tlist: Time list
+    :param H0: first hamiltonian
+    :param H1: second hamiltonian
+    :param s: function - relates time to coupling, default is linear dependecy
+    :return:
+    """
+    tmin = min(tlist)
+    tmax = max(tlist)
+    s = lambda t: (t - tmin) / (tmax - tmin)
+    H0_energies = H0.eigenenergies()
+    H0_degeneracy = sum(abs(H0_energies - H0_energies.min()) < PRECISION)
+    _, groundspace = H0.eigenstates(eigvals=H0_degeneracy)
+    P_mat = []
+    eigvals_mat = []
+    psi = psi0
+    psis = [psi]
+    eigvals_mat.append(H0_energies)
+    gs_projection = sum([abs(groundstate.overlap(psi)) ** 2 for groundstate in groundspace])
+    P_mat.append(
+        [gs_projection])
+    oldt = tmin
+
+    # # TODO: remove debug
+    # #
+    # import pydevd
+    # from  importlib import reload
+    # reload(pydevd)
+    # pydevd.settrace('localhost', port=4000, stdoutToServer=True, stderrToServer=True)
+
+    for t in tlist[1:]:
+        dt = t - oldt
+        Ht = H0 * (1 - s(t)) + H1 * (s(t))
+        Ht_energies = Ht.eigenenergies()
+        Ht_degeneracy = sum(abs(Ht_energies - Ht_energies.min()) < PRECISION)
+        _, groundspace = Ht.eigenstates(eigvals=Ht_degeneracy)
+        U = expm(-1j * Ht.data * dt)
+        psi = Qobj(U * psi.data, dims=psi.dims)
+        psis.append(psi)
+        eigvals_mat.append(Ht_energies)
+        gs_projection = sum([abs(groundstate.overlap(psi)) ** 2 for groundstate in groundspace])
+        P_mat.append(
+            [gs_projection])
+        oldt = t
+    return P_mat, eigvals_mat, psis

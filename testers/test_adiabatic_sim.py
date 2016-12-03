@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[2]:
 
 get_ipython().magic('matplotlib inline')
 
@@ -19,12 +19,12 @@ sys.path.insert(0,"/home/yonatan/PycharmProjects/qutip")
 import LH_tools as LHT
 
 
-# In[2]:
+# In[3]:
 
 import dorit.XXZZham as XXZZham
 
 
-# In[3]:
+# In[4]:
 
 import adiabatic_sim 
 n = 6
@@ -58,12 +58,12 @@ tlist = np.linspace(0, tmax , 10)
 # pass
 
 
-# In[4]:
+# In[5]:
 
 import importlib
 
 
-# In[55]:
+# In[6]:
 
 importlib.reload(adiabatic_sim)
 tlist = adiabatic_sim.sim_dynamic_evolution_binsearch(H_0, H_1,0.9)
@@ -96,7 +96,7 @@ LHT.plot_PandEV(P_mat, evals_mat, linlist)
 pass
 
 
-# In[50]:
+# In[1]:
 
 linlist = np.linspace(0,np.amax(tlist),len(tlist))
 s = lambda t : LHT.s_function(t,N,eps)
@@ -150,9 +150,31 @@ LHT.plot_PandEV(P_mat, evals_mat, tlist)
 pass
 
 
-# In[65]:
+# In[4]:
+
+from importlib import reload
+reload(adiabatic_sim)
 
 
+# In[ ]:
+
+psis, slist, pr_list, ev_list = adiabatic_sim.sim_dynamic_evolution_binsearch2( H_0, H_1, 0.3, 39,1)
+
+
+# In[115]:
+
+LHT.plot_PandEV(pr_list,ev_list,np.linspace(0,len(pr_list),len(pr_list)))
+pass
+
+
+# In[107]:
+
+slist
+
+
+# In[7]:
+
+P_mat
 
 
 # In[ ]:

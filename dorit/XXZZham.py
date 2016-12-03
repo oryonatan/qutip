@@ -83,7 +83,7 @@ def rotate_to_00_base(oper):
     return qutip.Qobj(rotated, dims=oper.dims)
 
 
-def add_high_energies(oper, big_value):
+def add_high_energies(oper, big_value) -> qutip.Qobj:
     """
     Assuming an operator is rotated to a "nice" base, I will add values to its diagonal in outside the small
     top-leftsided box
