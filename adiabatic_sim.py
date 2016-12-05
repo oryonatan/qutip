@@ -1,7 +1,8 @@
 from qutip import *
 import numpy as np
 from scipy.linalg import expm
-from tqdm import tnrange,tqdm_notebook
+from tqdm import tnrange, tqdm_notebook
+import LH_tools as LHT
 
 
 def sim_simple_adiabatic(tlist, H0, H1, s='linear'):
@@ -292,22 +293,22 @@ def sim_dynamic_evolution_binsearch3(H0, H1, target_p0, dt, linearization_factor
     s = 0
     time_rounding = 0.01
     first_step = True
-    with tqdm_notebook(total=100,desc = "progress of s") as progress_bar:
+    with tqdm_notebook(total=100, desc="progress of s") as progress_bar:
         while (s < 1 - time_rounding):
-            search_range = 1-s
+            search_range = 1 - s
             s0 = s
             for i in range(max_depth):
                 d2s = search_range / (2 ** (i + 1))
-                phi, pr_phi, _, _, _ = s_evolve2(psi, H0, H1, s0, s-s0 + d2s, dt)
+                phi, pr_phi, _, _, _ = s_evolve2(psi, H0, H1, s0, s - s0 + d2s, dt)
                 if (((1 - pr_phi) / (s + d2s)) * (1 + first_step)) < target_p0:
                     s += d2s
                 else:
                     continue
             first_step = False
-            if s==s0 :
+            if s == s0:
                 s += d2s
-            progress_bar.update(int(100 * (s-s0)))
-            psi, pr_psi, _, eigvals, _ = s_evolve2(psi, H0, H1, s0, s-s0 + d2s, dt, eigvals_to_show)
+            progress_bar.update(int(100 * (s - s0)))
+            psi, pr_psi, _, eigvals, _ = s_evolve2(psi, H0, H1, s0, s - s0 + d2s, dt, eigvals_to_show)
             psis.append(psi)
             slist.append(s)
             pr_list.append(pr_psi)
@@ -318,7 +319,6 @@ def sim_dynamic_evolution_binsearch3(H0, H1, target_p0, dt, linearization_factor
         slist.append(1)
         pr_list.append(pr_psi)
         ev_list.append(eigvals)
-
 
     return psis, slist, pr_list, ev_list
 
@@ -348,13 +348,13 @@ def sim_dynamic_evolution_baf3(H0, H1, target_p0, dt, linearization_factor=1, ma
     back_prop = qeye(H0.dims[0]).data
     first_step = True
 
-    with tqdm_notebook(total=100,desc = "progress of s") as progress_bar:
+    with tqdm_notebook(total=100, desc="progress of s") as progress_bar:
         while (s < 1 - time_rounding):
-            search_range = 1-s
+            search_range = 1 - s
             s0 = s
             for i in range(max_depth):
                 d2s = search_range / (2 ** (i + 1))
-                phi, pr_phi, _, _, _,_,_ = \
+                phi, pr_phi, _, _, _, _, _ = \
                     s_evolve_baf3(psi, H0, H1, eigvecs, s0, s - s0 + d2s, dt, forward_prop, back_prop)
 
                 if (((1 - pr_phi) / (s + d2s)) * (1 + first_step)) < target_p0:
@@ -363,12 +363,12 @@ def sim_dynamic_evolution_baf3(H0, H1, target_p0, dt, linearization_factor=1, ma
                     continue
             first_step = False
 
-            if s==s0 :
+            if s == s0:
                 s += d2s
 
-            progress_bar.update(int(100 * (s-s0)))
-            psi, pr_psi, _, eigvals, _,forward_prop,back_prop = \
-                s_evolve_baf3(psi, H0, H1, eigvecs, s0, s - s0 + d2s, dt, forward_prop, back_prop,eigvals_to_show)
+            progress_bar.update(int(100 * (s - s0)))
+            psi, pr_psi, _, eigvals, _, forward_prop, back_prop = \
+                s_evolve_baf3(psi, H0, H1, eigvecs, s0, s - s0 + d2s, dt, forward_prop, back_prop, eigvals_to_show)
             psis.append(psi)
             slist.append(s)
             pr_list.append(pr_psi)
@@ -705,7 +705,7 @@ def s_evolve_baf(psi, H0, H1, H0_eigvecs, s, ds, dt, forward_prop, back_prop):
     return psi, pr_psi, Ht, ds, eigvals, eigvecs, forward_prop, back_prop
 
 
-def s_evolve_baf3(psi, H0, H1, H0_eigvecs, s, ds, dt, forward_prop, back_prop,eigvals_to_show=2):
+def s_evolve_baf3(psi, H0, H1, H0_eigvecs, s, ds, dt, forward_prop, back_prop, eigvals_to_show=2):
     """
 
     :param psi:
@@ -841,7 +841,7 @@ PRECISION = 2 ** -40
 
 def sim_degenerate_adiabatic(tlist, H0: qobj, H1: qobj, psi0: qobj):
     """
-
+    Simulates evolution under hamiltonians with degenerate GS
     :param tlist: Time list
     :param H0: first hamiltonian
     :param H1: second hamiltonian
@@ -881,7 +881,10 @@ def sim_degenerate_adiabatic(tlist, H0: qobj, H1: qobj, psi0: qobj):
         psi = Qobj(U * psi.data, dims=psi.dims)
         psis.append(psi)
         eigvals_mat.append(Ht_energies)
-        gs_projection = sum([abs(groundstate.overlap(psi)) ** 2 for groundstate in groundspace])
+        #gs_projection = sum([abs(groundstate.overlap(psi)) ** 2 for groundstate in groundspace])
+        # if len(groundspace) > 1:
+        #     print("old method ", gs_projection, " new method", LHT.get_total_projection_size(groundspace, psi))
+        gs_projection = LHT.get_total_projection_size(groundspace, psi)
         P_mat.append(
             [gs_projection])
         oldt = t

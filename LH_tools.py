@@ -11,6 +11,7 @@ from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 
 from qutip import Qobj
+from typing import Tuple
 
 
 def s_function(t, N=1024, epsilon=0.1):
@@ -327,3 +328,54 @@ class LocalOperator:
 
     def __repr__(self):
         return str(self.dict_of_ops)
+
+
+def make_pair_orthonormal(v1: qobj, v2: qobj) -> (qobj, qobj):
+    """
+    Uses gramm shmidt like process to take two vectors and return two orthonormal vectors
+    :param v1:
+    :param v2:
+    :return: (a,b) two orthonormal vectors
+    """
+    a = v1 / v1.norm()
+    aproj = a.overlap(v2) * a
+    b_non_norm = (v2 - aproj)
+    b = b_non_norm / b_non_norm.norm()
+    return a, b
+
+
+def get_total_projection_size(subspace: Tuple[Qobj], psi: Qobj) -> float:
+    """
+    Finds the total projection size over a subspace defined by a list of vectors (not necessarily orthogonal)
+    :param subspace:
+    :param psi:
+    :return:
+    """
+    subspace_mat = np.concatenate([vector.data.toarray() for vector in subspace], axis=1)
+    # use gram shmidt QR factorization
+    Q, _ = np.linalg.qr(subspace_mat)
+
+    projection_vector = np.abs(
+                                Q.transpose().dot(psi.data.toarray())
+                                ) ** 2
+    return sum(projection_vector)
+
+
+# Finds the minimal angle between two subsapces
+# I think
+
+def subspace_angle(A: Tuple[Qobj], B: Tuple[Qobj]) -> (float, str):
+    """
+    Computes angle between subspace A and B
+    :param A:
+    :param B:
+    :return: angle in rads, string - angle as parts of pi
+    """
+    inner_product_mat = np.zeros([len(A), len(B)])
+    for i in range(len(A)):
+        for j in range(len(B)):
+            inner_product_mat[i][j] = A[i].overlap(B[j].trans().conj())
+
+    rads = (np.arccos(np.amax(inner_product_mat)))
+    deg_as_str = "π/%s" % (np.pi / rads)
+    return rads, deg_as_str
