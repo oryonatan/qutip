@@ -6,6 +6,7 @@ import time
 import matplotlib.pyplot as plt
 import os
 import smtplib
+import scipy.linalg
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
@@ -379,3 +380,19 @@ def subspace_angle(A: Tuple[Qobj], B: Tuple[Qobj]) -> (float, str):
     rads = (np.arccos(np.amax(inner_product_mat)))
     deg_as_str = "π/%s" % (np.pi / rads)
     return rads, deg_as_str
+
+
+def find_degeneracy(H , precision = 10**-10) -> int:
+    """
+    Return the degree of the gorundsaoce of H
+    :param H: hamitonian either Qobj or hermitian scipy.sparse.csr.csr_matrix
+    :param precision: precision parameter, all energies < min(energies)+ precision will be considered ground energies
+    :return: dimension of groundspace.
+    """
+    if type(H) == qutip.qobj.Qobj :
+        energies = scipy.linalg.eigh(H.data.toarray())[0]
+    elif type(H) == scipy.sparse.csr.csr_matrix:
+        energies = scipy.linalg.eigh(H.toarray())[0]
+    elif type(H) ==numpy.ndarray:
+        energies = scipy.linalg.eigh(H)[0]
+    return sum(abs(energies - energies.min()) < precision)

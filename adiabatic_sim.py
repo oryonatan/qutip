@@ -3,6 +3,7 @@ import numpy as np
 from scipy.linalg import expm
 from tqdm import tnrange, tqdm_notebook
 import LH_tools as LHT
+import scipy.sparse
 
 
 def sim_simple_adiabatic(tlist, H0, H1, s='linear'):
@@ -859,7 +860,8 @@ def sim_degenerate_adiabatic(tlist, H0: qobj, H1: qobj, psi0: qobj):
     psi = psi0
     psis = [psi]
     eigvals_mat.append(H0_energies)
-    gs_projection = sum([abs(groundstate.overlap(psi)) ** 2 for groundstate in groundspace])
+    #gs_projection = sum([abs(groundstate.overlap(psi)) ** 2 for groundstate in groundspace])
+    gs_projection = LHT.get_total_projection_size(groundspace,psi)[0]
     P_mat.append(
         [gs_projection])
     oldt = tmin
@@ -874,6 +876,7 @@ def sim_degenerate_adiabatic(tlist, H0: qobj, H1: qobj, psi0: qobj):
     for t in tlist[1:]:
         dt = t - oldt
         Ht = H0 * (1 - s(t)) + H1 * (s(t))
+        ## TODO: using scipy.linalg.eigsh gives great performance boost
         Ht_energies = Ht.eigenenergies()
         Ht_degeneracy = sum(abs(Ht_energies - Ht_energies.min()) < PRECISION)
         _, groundspace = Ht.eigenstates(eigvals=Ht_degeneracy)
@@ -889,3 +892,69 @@ def sim_degenerate_adiabatic(tlist, H0: qobj, H1: qobj, psi0: qobj):
             [gs_projection])
         oldt = t
     return P_mat, eigvals_mat, psis
+
+
+#
+# def sim_degenerate_adiabatic2(tlist, H0: qobj, H1: qobj, psi0: qobj):
+#     """
+#     Simulates evolution under hamiltonians with degenerate GS
+#     :param tlist: Time list
+#     :param H0: first hamiltonian
+#     :param H1: second hamiltonian
+#     :param s: function - relates time to coupling, default is linear dependecy
+#     :return:
+#     """
+#     eigsh = scipy.sparse.linalg.eigsh
+#     tmin = min(tlist)
+#     tmax = max(tlist)
+#     s = lambda t: (t - tmin) / (tmax - tmin)
+#
+#     # TODO: remove debug
+#     #
+#     import pydevd
+#     from  importlib import reload
+#     reload(pydevd)
+#     pydevd.settrace('localhost', port=4000, stdoutToServer=True, stderrToServer=True)
+#
+#     evals, evecs = eigsh(H0.data)
+#     idx = evals.argsort()
+#     evals = evals[idx]
+#     evecs = evecs[:, idx]
+#     H0_degeneracy =sum(abs(evals - evals.min()) < PRECISION)
+#     groundspace = [Qobj(evecs[:,i]) for i in range(H0_degeneracy)]
+#     P_mat = []
+#     eigvals_mat = []
+#     psi = psi0
+#     psis = [psi]
+#     eigvals_mat.append(evals)
+#     gs_projection = sum([abs(groundstate.overlap(psi)) ** 2 for groundstate in groundspace])
+#     P_mat.append(
+#         [gs_projection])
+#     oldt = tmin
+#
+#
+#
+#     for t in tlist[1:]:
+#         dt = t - oldt
+#         Ht = H0 * (1 - s(t)) + H1 * (s(t))
+#         ## TODO: using scipy.linalg.eigsh gives great performance boost
+#
+#         Ht_energies, evecs = eigsh(H0.data)
+#         Ht_degeneracy = sum(abs(Ht_energies - Ht_energies.min()) < PRECISION)
+#         _, groundspace = [Qobj(evecs[:i]) for i in range(H0_degeneracy)]
+#
+#
+#         U = expm(-1j * Ht.data * dt)
+#         psi = Qobj(U * psi.data, dims=psi.dims)
+#         psis.append(psi)
+#         eigvals_mat.append(Ht_energies)
+#         #gs_projection = sum([abs(groundstate.overlap(psi)) ** 2 for groundstate in groundspace])
+#         # if len(groundspace) > 1:
+#         #     print("old method ", gs_projection, " new method", LHT.get_total_projection_size(groundspace, psi))
+#         gs_projection = LHT.get_total_projection_size(groundspace, psi)
+#         P_mat.append(
+#             [gs_projection])
+#         oldt = t
+#     return P_mat, eigvals_mat, psis
+#
+#

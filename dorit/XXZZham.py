@@ -16,7 +16,6 @@ class XXZZ_term:
         :param a: coefficient
         """
 
-
         if i >= j:
             raise ValueError("i must be strictly smaller than j")
         self.i = i
@@ -52,10 +51,10 @@ class XXZZham:
         else:
             self.degree = degree
 
-    def get_ham(self):
+    def get_ham(self) -> qutip.Qobj:
         return qutip.Qobj(sum([term.get_oper(self.degree) for term in self.local_terms]))
 
-    def get_commuting_term_ham(self):
+    def get_commuting_term_ham(self) -> qutip.Qobj:
         return sum([term.get_commuting_form(self.degree) for term in self.local_terms])
 
 
@@ -64,7 +63,7 @@ def rotate_to_00_base(oper):
     Assumes matrix of size 2^(2n) where
     rotatets to the a base where the first 2^n vectors are
     {0,1}^n \tensor {0}^n
-    the second is 2^n vectors are
+    the second is 2^n vectors areN
     {0,1}^n \tensor {0}^(n-1)\tensor 1
     ans so on
     untill the laste 2^n vectors which are
