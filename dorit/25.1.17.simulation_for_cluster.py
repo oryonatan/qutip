@@ -16,6 +16,13 @@ import dorit.XXZZham as XXZZham
 from dorit.XXZZham import add_high_energies, rotate_to_00_base
 import random
 import adiabatic_sim as asim
+import time
+import os
+
+
+n = 6
+OUTPUT_PATH = "/cs/labs/doria/oryonatan/qutip/simulation_outputs/"
+OUTPUT_FILENAME = os.path.join(OUTPUT_PATH, time.ctime().replace(' ','_')+"n_%d" %n)
 
 
 def create_vector_from_string(vec_to_build: str) -> Qobj:
@@ -43,7 +50,6 @@ def create_all_even_vectors(n):
     return ret
 
 
-n = 5
 evens = create_all_even_vectors(n)
 IDeven = sum(v * v.trans() for v in evens)
 PRECISION = 2 ** -40
@@ -97,10 +103,16 @@ for _ in range(1000):
 
     unnormalized_even_PgsLH = abs((tensor([Proj_gLSH, IDeven]) * gamma).tr())
     even_P_normalization = abs((tensor([tensor([qeye(2)] * n), IDeven]) * gamma).tr())
+    with open(OUTPUT_FILENAME,'a') as outfile:
+        outfile.write("Unormalized projection (GLSH+EVEN)\t\t\t%f" % unnormalized_even_PgsLH)
+        outfile.write("Even projection \t\t\t\t\t\t\t%f" % even_P_normalization)
+        outfile.write("Normalized projection (GLSH+EVEN)/EVEN \t%f" % (unnormalized_even_PgsLH/even_P_normalization))
+        outfile.write("==========================================================================")
+
     print (alist)
     print("Unormalized projection (GLSH+EVEN\t\t\t%f" % unnormalized_even_PgsLH)
     print("Even projection \t\t\t\t\t\t\t%f" % even_P_normalization)
-    print("Nonrmalized projection (GLSH+EVEN)/EVEN \t%f" % (unnormalized_even_PgsLH/even_P_normalization))
+    print("Normalized projection (GLSH+EVEN)/EVEN \t%f" % (unnormalized_even_PgsLH/even_P_normalization))
     print("==========================================================================")
     if unnormalized_even_PgsLH/even_P_normalization < 0.3 :
         print ("low ")
