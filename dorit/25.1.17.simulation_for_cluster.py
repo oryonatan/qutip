@@ -12,15 +12,20 @@ from qutip import *
 import numpy as np
 
 pyximport.install(setup_args={"include_dirs": np.get_include()})
-import dorit.XXZZham as XXZZham
-from dorit.XXZZham import add_high_energies, rotate_to_00_base
+import XXZZham as XXZZham
+from XXZZham import add_high_energies, rotate_to_00_base
 import random
 import adiabatic_sim as asim
 import time
+
+import ctypes
+mkl_rt = ctypes.CDLL('libmkl_rt.so')
+mkl_get_max_threads = mkl_rt.mkl_get_max_threads
+mkl_rt.mkl_set_num_threads(ctypes.byref(ctypes.c_int(48)))
 import os
 
 
-n = 6
+n = 6 
 OUTPUT_PATH = "/cs/labs/doria/oryonatan/qutip/simulation_outputs/"
 OUTPUT_FILENAME = os.path.join(OUTPUT_PATH, time.ctime().replace(' ','_')+"n_%d" %n)
 
@@ -71,9 +76,10 @@ for _ in range(1000):
     ID2n = tensor([qeye(2)] * n * 2)
     HE_ev = H_highE.eigenstates(eigvals=1)[1][0]
     P_HE = ID2n - HE_ev * HE_ev.trans()
-    HCR_en = h_com_rot.eigenenergies()
+    HCR_en,HCR_ev = h_com_rot.eigenstates(eigvals=10)
     HCR_degeneracy = sum(abs(HCR_en - HCR_en.min()) < PRECISION)
-    _, HCR_groundspace = h_com_rot.eigenstates(eigvals=HCR_degeneracy)
+    HCR_groundspace = HCR_ev[0:HCR_degeneracy]
+    #_, HCR_groundspace = h_com_rot.eigenstates(eigvals=HCR_degeneracy)
     P_CR = ID2n - sum([gs * gs.trans() for gs in HCR_groundspace])
 
     # prepare the first state for CLH-HIGHE evolution
@@ -81,7 +87,7 @@ for _ in range(1000):
     P99 = P_HE * 0.01 + P_CR * 0.99
     psi0_99 = P99.eigenstates(eigvals=1)[1][0]
 
-    P_mat, _, psis = asim.sim_degenerate_adiabatic(tlist, P99, P_CR, psi0_99)
+    P_mat, _, psis = asim.sim_degenerate_adiabatic(tlist, P99, P_CR, psi0_99, 10)
     print(P_mat[-1][0], "this should be close to one")
     psifinal_from_99 = psis[-1]  # should be the GS we get from evolution to P_CR starting in 99
 

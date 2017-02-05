@@ -1,3 +1,7 @@
+import sys
+import os
+
+sys.path.insert(1, os.path.join(sys.path[0], '..'))
 from LH_tools import LocalOperator as LO
 import numpy as np
 import qutip
