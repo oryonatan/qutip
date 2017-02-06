@@ -25,7 +25,7 @@ mkl_rt.mkl_set_num_threads(ctypes.byref(ctypes.c_int(48)))
 import os
 
 
-n = 6 
+n = 5 
 OUTPUT_PATH = "/cs/labs/doria/oryonatan/qutip/simulation_outputs/"
 OUTPUT_FILENAME = os.path.join(OUTPUT_PATH, time.ctime().replace(' ','_')+"n_%d" %n)
 

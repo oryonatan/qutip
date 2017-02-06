@@ -5,6 +5,12 @@ from tqdm import tnrange, tqdm_notebook
 import LH_tools as LHT
 import scipy.sparse
 
+import ctypes
+mkl_rt = ctypes.CDLL('libmkl_rt.so')
+mkl_get_max_threads = mkl_rt.mkl_get_max_threads
+mkl_rt.mkl_set_num_threads(ctypes.byref(ctypes.c_int(48)))
+import os
+
 
 def sim_simple_adiabatic(tlist, H0, H1, s='linear'):
     """
