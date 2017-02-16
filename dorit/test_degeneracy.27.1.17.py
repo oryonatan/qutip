@@ -7,18 +7,19 @@ warnings.filterwarnings('ignore')
 import sys
 import os
 
-sys.path.insert(0, os.path.join(os.getcwd(), os.pardir))
+
+#sys.path.insert(0, os.path.join(os.getcwd(), os.pardir))
 import numpy as np
 
-pyximport.install(setup_args={"include_dirs": np.get_include()})
-import dorit.XXZZham as XXZZham
-from dorit.XXZZham import rotate_to_00_base
+#pyximport.install(setup_args={"include_dirs": np.get_include()})
+import XXZZham as XXZZham
+from XXZZham import rotate_to_00_base
 import random
 import time
 from scipy import linalg
 PRECISION = 2 ** -30
 
-for n in range(2,10):
+for n in range(2,7):
     alist = []
     terms = []
     for i in range(1, n + 1):
@@ -33,7 +34,7 @@ for n in range(2,10):
 
     start_time = time.time()
 
-    HCR_en = h_com_rot.eigenstates()[0]
+    HCR_en = h_com_rot.eigenstates(eigvals=10)[0]
     # HCR_en = linalg.eigvals(h_com_rot.data.todense())
     duration = time.time() - start_time
 

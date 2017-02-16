@@ -840,7 +840,7 @@ Degeneracy evolution
 PRECISION = 2 ** -40
 
 
-def sim_degenerate_adiabatic(tlist, H0: qobj, H1: qobj, psi0: qobj):
+def sim_degenerate_adiabatic(tlist, H0: qobj, H1: qobj, psi0: qobj, max_degen=False):
     """
     Simulates evolution under hamiltonians with degenerate GS
     :param tlist: Time list
@@ -852,9 +852,9 @@ def sim_degenerate_adiabatic(tlist, H0: qobj, H1: qobj, psi0: qobj):
     tmin = min(tlist)
     tmax = max(tlist)
     s = lambda t: (t - tmin) / (tmax - tmin)
-    H0_energies = H0.eigenenergies()
+    H0_energies,H0_ev = H0.eigenstates(eigvals=max_degen)
     H0_degeneracy = sum(abs(H0_energies - H0_energies.min()) < PRECISION)
-    _, groundspace = H0.eigenstates(eigvals=H0_degeneracy)
+    groundspace = H0_ev[0:H0_degeneracy]
     P_mat = []
     eigvals_mat = []
     psi = psi0
@@ -876,10 +876,9 @@ def sim_degenerate_adiabatic(tlist, H0: qobj, H1: qobj, psi0: qobj):
     for t in tlist[1:]:
         dt = t - oldt
         Ht = H0 * (1 - s(t)) + H1 * (s(t))
-        ## TODO: using scipy.linalg.eigsh gives great performance boost
-        Ht_energies = Ht.eigenenergies()
+        Ht_energies,HT_ev = Ht.eigenstates(eigvals=max_degen)
         Ht_degeneracy = sum(abs(Ht_energies - Ht_energies.min()) < PRECISION)
-        _, groundspace = Ht.eigenstates(eigvals=Ht_degeneracy)
+        groundspace = HT_ev[0:Ht_degeneracy]
         U = expm(-1j * Ht.data * dt)
         psi = Qobj(U * psi.data, dims=psi.dims)
         psis.append(psi)
