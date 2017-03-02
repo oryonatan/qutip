@@ -85,7 +85,6 @@ while True:
     psi0_99 = P99.eigenstates(eigvals=1)[1][0]
 
     P_mat, _, psis = asim.sim_degenerate_adiabatic(tlist, P99, P_CR, psi0_99, 10)
-    print(P_mat[-1][0], "this should be close to one")
     psifinal_from_99 = psis[-1]  # should be the GS we get from evolution to P_CR starting in 99
     psi0_small = H.get_ham().eigenstates(eigvals=1)[1][0]
 
