@@ -65,7 +65,7 @@ class XXZZham:
 def rotate_to_00_base(oper):
     """
     Assumes matrix of size 2^(2n) where
-    rotatets to the a base where the first 2^n vectors are
+    rotates to the a base where the first 2^n vectors are
     {0,1}^n \tensor {0}^n
     the second is 2^n vectors areN
     {0,1}^n \tensor {0}^(n-1)\tensor 1
@@ -84,6 +84,93 @@ def rotate_to_00_base(oper):
         rotmat[j][i] = 1
     rotated = rotmat.conj().dot(oper_ar.dot(rotmat))
     return qutip.Qobj(rotated, dims=oper.dims)
+
+
+def rotate_to_evil_base(oper):
+    """
+    Assumes matrix of size 2^(2n) where
+    rotates to the a base where the first 2^n vectors are
+    00x00
+    01x00
+    10x00
+    11x00
+    00x11
+    01x11
+    10x11
+    11x11
+    00x01
+    01x01
+    10x01
+    11x01
+    00x10
+    01x10
+    10x10
+    11x10
+    until the last vector with odd number
+    :param oper: operator to rotate
+    :return: rotated operator
+    """
+    import pydevd
+    pydevd.settrace('localhost', port=4000, stdoutToServer=True, stderrToServer=True)
+    space_size = oper.data.shape[0]
+    oper_ar = oper.data.toarray()
+    rotmat = np.zeros_like(oper_ar)
+    for j,i in enumerate(evil_base_get_next_number(int(np.log2(space_size)))):
+        rotmat[j][i] = 1
+    rotated = rotmat.conj().dot(oper_ar.dot(rotmat))
+    return qutip.Qobj(rotated, dims=oper.dims)
+
+
+def evil_base_get_next_number(base_len):
+    """
+    Returns the next number in the evil base
+    :param base_len:
+    :return:
+    """
+    part_len = int(base_len / 2)
+    right_part = "0" * part_len
+    left_part = "0" * part_len
+    for i in range(2 ** base_len):
+        if 0 == right_part.count("1") % 2 :
+            print(left_part + right_part)
+            yield int(left_part + right_part, base=2)
+            left_part, overflow = inc_binary_string(left_part)
+            if overflow :
+                right_part,end = inc_binary_string(right_part)
+                if end:
+                    break
+        else:
+            right_part, end = inc_binary_string(right_part)
+    for i in range(2 ** base_len):
+        if 1 == right_part.count("1") % 2 :
+            print(left_part + right_part)
+            yield int(left_part + right_part, base=2)
+            left_part, overflow = inc_binary_string(left_part)
+            if overflow :
+                right_part,_ = inc_binary_string(right_part)
+                if not "0" in right_part:
+                    break
+        else:
+            right_part, _ = inc_binary_string(right_part)
+
+
+def inc_binary_string(bin_str):
+    """
+    Increases a a value of number represented as binary string
+    :param bin_str:
+    :return:
+    """
+    # if str is 11111
+    if "0" not in bin_str:
+        overflow = True
+        return bin_str.replace("1", "0"), True
+    overflow = False
+    newstr = \
+        str(
+            bin(
+                int(bin_str, base=2) + 1
+            ))[2:].zfill(len(bin_str))
+    return newstr, overflow
 
 
 def add_high_energies(oper, big_value) -> qutip.Qobj:

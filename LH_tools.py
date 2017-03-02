@@ -396,3 +396,48 @@ def find_degeneracy(H , precision = 10**-10) -> int:
     elif type(H) ==numpy.ndarray:
         energies = scipy.linalg.eigh(H)[0]
     return sum(abs(energies - energies.min()) < precision)
+
+
+
+def create_vector_from_string(vec_to_build: str) -> Qobj:
+    """ Creates a vector from 0/1 string - indicator in the computational basis
+        i.e. the string 010 will create the vector |010>
+
+    """
+    to_tensor = []
+    for digit in vec_to_build:
+        if digit == '0':
+            to_tensor.append(basis(2, 0))
+        elif digit == '1':
+            to_tensor.append(basis(2, 1))
+        else:
+            raise ValueError("String should consist only of 0 and 1")
+    return tensor(to_tensor)
+
+
+def create_all_even_vectors(n) -> [Qobj]:
+    """
+    Creates an array of all the vectors in the computational basis with an even number of 1's
+    :param n: basis size
+    :return: array
+    """
+    ret = []
+    for i in range(2 ** n):
+        binformat = bin(i)[2:].zfill(n)
+        if 0 == binformat.count('0') % 2:
+            ret.append(create_vector_from_string(binformat))
+    return ret
+
+def create_all_odd_vectors(n) -> [Qobj]:
+    """
+    Creates an array of all the vectors in the computational basis with an odd number of 1's
+    :param n: basis size
+    :return: array
+    """
+    ret = []
+    for i in range(2 ** n):
+        binformat = bin(i)[2:].zfill(n)
+        if 1 == binformat.count('0') % 2:
+            ret.append(create_vector_from_string(binformat))
+    return ret
+

@@ -15,6 +15,7 @@ pyximport.install(setup_args={"include_dirs": np.get_include()})
 import XXZZham as XXZZham
 from XXZZham import add_high_energies, rotate_to_00_base
 import random
+import LH_tools as LHT
 import adiabatic_sim as asim
 import time
 
@@ -24,38 +25,21 @@ mkl_get_max_threads = mkl_rt.mkl_get_max_threads
 mkl_rt.mkl_set_num_threads(ctypes.byref(ctypes.c_int(48)))
 import os
 
+<<<<<<< HEAD
+n = 6
+=======
 
+<<<<<<< HEAD
 n = 5 
+=======
+n = 6 
+>>>>>>> afa916d359e34cf6f69e65ae2b46863faf95d254
+>>>>>>> 89ec7dfcdb533a734a72b6e96ca5ab491848b5df
 OUTPUT_PATH = "/cs/labs/doria/oryonatan/qutip/simulation_outputs/"
-OUTPUT_FILENAME = os.path.join(OUTPUT_PATH, time.ctime().replace(' ','_')+"n_%d" %n)
+OUTPUT_FILENAME = os.path.join(OUTPUT_PATH, time.ctime().replace(' ', '_') + "n_%d" % n)
 
 
-def create_vector_from_string(vec_to_build: str) -> Qobj:
-    """ Creates a vector from 0/1 string - indicator in the computational basis
-        i.e. the string 010 will create the vector |010>
-
-    """
-    to_tensor = []
-    for digit in vec_to_build:
-        if digit == '0':
-            to_tensor.append(basis(2, 0))
-        elif digit == '1':
-            to_tensor.append(basis(2, 1))
-        else:
-            raise ValueError("String should consist only of 0 and 1")
-    return tensor(to_tensor)
-
-
-def create_all_even_vectors(n):
-    ret = []
-    for i in range(2 ** n):
-        binformat = bin(i)[2:].zfill(n)
-        if 0 == binformat.count('0') % 2:
-            ret.append(create_vector_from_string(binformat))
-    return ret
-
-
-evens = create_all_even_vectors(n)
+evens = LHT.create_all_even_vectors(n)
 IDeven = sum(v * v.trans() for v in evens)
 PRECISION = 2 ** -40
 
@@ -91,7 +75,7 @@ for _ in range(1000):
     print(P_mat[-1][0], "this should be close to one")
     psifinal_from_99 = psis[-1]  # should be the GS we get from evolution to P_CR starting in 99
 
-    #DEBUG prints:
+    # DEBUG prints:
     # print("PCR ev0 %f" % P_CR.eigenenergies(eigvals=1))
     # print("\t actual energy %f" % expect(P_CR, psifinal_from_99))
     # print("CR ev0 %f" % h_com_rot.eigenenergies(eigvals=1))
@@ -109,16 +93,16 @@ for _ in range(1000):
 
     unnormalized_even_PgsLH = abs((tensor([Proj_gLSH, IDeven]) * gamma).tr())
     even_P_normalization = abs((tensor([tensor([qeye(2)] * n), IDeven]) * gamma).tr())
-    with open(OUTPUT_FILENAME,'a') as outfile:
+    with open(OUTPUT_FILENAME, 'a') as outfile:
         outfile.write("Unormalized projection (GLSH+EVEN)\t\t\t%f" % unnormalized_even_PgsLH)
         outfile.write("Even projection \t\t\t\t\t\t\t%f" % even_P_normalization)
-        outfile.write("Normalized projection (GLSH+EVEN)/EVEN \t%f" % (unnormalized_even_PgsLH/even_P_normalization))
+        outfile.write("Normalized projection (GLSH+EVEN)/EVEN \t%f" % (unnormalized_even_PgsLH / even_P_normalization))
         outfile.write("==========================================================================")
 
-    print (alist)
+    print(alist)
     print("Unormalized projection (GLSH+EVEN\t\t\t%f" % unnormalized_even_PgsLH)
     print("Even projection \t\t\t\t\t\t\t%f" % even_P_normalization)
-    print("Normalized projection (GLSH+EVEN)/EVEN \t%f" % (unnormalized_even_PgsLH/even_P_normalization))
+    print("Normalized projection (GLSH+EVEN)/EVEN \t%f" % (unnormalized_even_PgsLH / even_P_normalization))
     print("==========================================================================")
-    if unnormalized_even_PgsLH/even_P_normalization < 0.3 :
-        print ("low ")
+    if unnormalized_even_PgsLH / even_P_normalization < 0.3:
+        print("low ")
