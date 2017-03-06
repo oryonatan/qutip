@@ -967,7 +967,7 @@ def sim_degenerate_adiabatic(tlist, H0: qobj, H1: qobj, psi0: qobj, max_degen=Fa
 #
 
 
-def find_min_gap(H0: Qobj, H1: Qobj, low=0, high=1, epsilon=2 ** (-20), initial_resolution=50) -> float:
+def find_min_gap(H0: Qobj, H1: Qobj, low=0, high=1, epsilon=2 ** (-20), initial_resolution=50,max_threads = None) -> float:
     """
     Finds the minimal gap on the convex H0*(1-s)+H1*s between the energies indexed in low and high
     default - find the gap between the lowest and second lowest energies
@@ -982,7 +982,7 @@ def find_min_gap(H0: Qobj, H1: Qobj, low=0, high=1, epsilon=2 ** (-20), initial_
     # random sample over the convex initial_resolution points
     slist = [np.random.uniform() for i in range(initial_resolution)]
     local_searches = []
-    executor = concurrent.futures.ThreadPoolExecutor()
+    executor = concurrent.futures.ThreadPoolExecutor(max_threads)
     for s in slist:
         local_searches.append(
             executor.submit(__find_local_gap_minimum, s, H0, H1, low, high, epsilon, initial_resolution))
