@@ -29,8 +29,12 @@ import os
 n = 6
 =======
 
+<<<<<<< HEAD
+n = 5 
+=======
 n = 6 
 >>>>>>> afa916d359e34cf6f69e65ae2b46863faf95d254
+>>>>>>> 89ec7dfcdb533a734a72b6e96ca5ab491848b5df
 OUTPUT_PATH = "/cs/labs/doria/oryonatan/qutip/simulation_outputs/"
 OUTPUT_FILENAME = os.path.join(OUTPUT_PATH, time.ctime().replace(' ', '_') + "n_%d" % n)
 
