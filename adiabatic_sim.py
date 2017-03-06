@@ -4,6 +4,8 @@ from scipy.linalg import expm
 from tqdm import tnrange, tqdm_notebook
 import LH_tools as LHT
 import scipy.sparse
+import multiprocessing
+import concurrent.futures
 
 
 def sim_simple_adiabatic(tlist, H0, H1, s='linear'):
@@ -852,7 +854,7 @@ def sim_degenerate_adiabatic(tlist, H0: qobj, H1: qobj, psi0: qobj, max_degen=Fa
     tmin = min(tlist)
     tmax = max(tlist)
     s = lambda t: (t - tmin) / (tmax - tmin)
-    H0_energies,H0_ev = H0.eigenstates(eigvals=max_degen)
+    H0_energies, H0_ev = H0.eigenstates(eigvals=max_degen)
     H0_degeneracy = sum(abs(H0_energies - H0_energies.min()) < PRECISION)
     groundspace = H0_ev[0:H0_degeneracy]
     P_mat = []
@@ -860,8 +862,8 @@ def sim_degenerate_adiabatic(tlist, H0: qobj, H1: qobj, psi0: qobj, max_degen=Fa
     psi = psi0
     psis = [psi]
     eigvals_mat.append(H0_energies)
-    #gs_projection = sum([abs(groundstate.overlap(psi)) ** 2 for groundstate in groundspace])
-    gs_projection = LHT.get_total_projection_size(groundspace,psi)[0]
+    # gs_projection = sum([abs(groundstate.overlap(psi)) ** 2 for groundstate in groundspace])
+    gs_projection = LHT.get_total_projection_size(groundspace, psi)[0]
     P_mat.append(
         [gs_projection])
     oldt = tmin
@@ -876,14 +878,14 @@ def sim_degenerate_adiabatic(tlist, H0: qobj, H1: qobj, psi0: qobj, max_degen=Fa
     for t in tlist[1:]:
         dt = t - oldt
         Ht = H0 * (1 - s(t)) + H1 * (s(t))
-        Ht_energies,HT_ev = Ht.eigenstates(eigvals=max_degen)
+        Ht_energies, HT_ev = Ht.eigenstates(eigvals=max_degen)
         Ht_degeneracy = sum(abs(Ht_energies - Ht_energies.min()) < PRECISION)
         groundspace = HT_ev[0:Ht_degeneracy]
         U = expm(-1j * Ht.data * dt)
         psi = Qobj(U * psi.data, dims=psi.dims)
         psis.append(psi)
         eigvals_mat.append(Ht_energies)
-        #gs_projection = sum([abs(groundstate.overlap(psi)) ** 2 for groundstate in groundspace])
+        # gs_projection = sum([abs(groundstate.overlap(psi)) ** 2 for groundstate in groundspace])
         # if len(groundspace) > 1:
         #     print("old method ", gs_projection, " new method", LHT.get_total_projection_size(groundspace, psi))
         gs_projection = LHT.get_total_projection_size(groundspace, psi)
@@ -957,3 +959,74 @@ def sim_degenerate_adiabatic(tlist, H0: qobj, H1: qobj, psi0: qobj, max_degen=Fa
 #     return P_mat, eigvals_mat, psis
 #
 #
+
+
+def find_min_gap(H0: Qobj, H1: Qobj, low=0, high=1, epsilon=2 ** (-20), initial_resolution=50) -> float:
+    """
+    Finds the minimal gap on the convex H0*(1-s)+H1*s between the energies indexed in low and high
+    default - find the gap between the lowest and second lowest energies
+    this might fail to local minima
+    :param H0: First Hamiltoniabn
+    :param H1: Second Hamiltoniabn
+    :param low: index of low energy
+    :param high:index of higi energy
+    :param epsilon: convergence
+    :return: the lowest energy found
+    """
+    # random sample over the convex initial_resolution points
+    slist = [np.random.uniform() for i in range(initial_resolution)]
+    local_searches = []
+    executor = concurrent.futures.ThreadPoolExecutor()
+    for s in slist:
+        local_searches.append(
+            executor.submit(__find_local_gap_minimum, s, H0, H1, low, high, epsilon, initial_resolution))
+    results = [search.result() for search in concurrent.futures.as_completed(local_searches)]
+    return min(results)
+
+
+def __find_local_gap_minimum(s: float, H0: Qobj, H1: Qobj, low=0, high=1, epsilon=2 ** (-20), initial_resolution=50):
+    """
+    Finds the local minimal gap in the vicinity of s
+    :param s: Point on the convex
+    :param H0: First Hamiltoniabn
+    :param H1: Second Hamiltoniabn
+    :param low: index of low energy
+    :param high:index of high energy
+    :param epsilon: accuracy of search
+    :param initial_resolution:
+    :return: local_minima, s
+    """
+    ds = 1 / (initial_resolution * 2)
+    gap_s = __get_gap(s, H0, H1, low, high)
+    gap_s_ds = __get_gap(s + ds, H0, H1, low, high)
+    delta_gap = gap_s - gap_s_ds
+    while abs(delta_gap) > epsilon:
+        if gap_s < gap_s_ds:
+            # change direction, walk slower
+            ds = -ds / 2
+        s = s + ds
+        # handle overflows
+        if s > 1 or s < 0 :
+            s = round(s)
+            gap_s = __get_gap(s, H0, H1, low, high)
+            gap_s_ds = gap_s
+            ds = 0
+        gap_s = __get_gap(s, H0, H1, low, high)
+        gap_s_ds = __get_gap(s + ds, H0, H1, low, high)
+        delta_gap = gap_s - gap_s_ds
+    return min((gap_s, s), (gap_s_ds, s + ds))
+
+
+def __get_gap(s, H0, H1, low, high) -> float:
+    """
+    Find the gap in the convex at parameter s
+    :param s: Point on the convex
+    :param H0: First Hamiltoniabn
+    :param H1: Second Hamiltoniabn
+    :param low: index of low energy
+    :param high:index of high energy
+    :return: gap
+    """
+    Hs = H0 * (1 - s) + H1 * s
+    Hs_en = Hs.eigenenergies(eigvals=high + 1)
+    return Hs_en[high] - Hs_en[low]
