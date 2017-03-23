@@ -13,6 +13,7 @@ from email.mime.multipart import MIMEMultipart
 
 from qutip import Qobj
 from typing import Tuple
+import collections
 
 
 def s_function(t, N=1024, epsilon=0.1):
@@ -357,8 +358,8 @@ def get_total_projection_size(subspace: Tuple[Qobj], psi: Qobj) -> float:
     Q, _ = np.linalg.qr(subspace_mat)
 
     projection_vector = np.abs(
-                                Q.transpose().dot(psi.data.toarray())
-                                ) ** 2
+        Q.transpose().dot(psi.data.toarray())
+    ) ** 2
     return sum(projection_vector)
 
 
@@ -382,21 +383,20 @@ def subspace_angle(A: Tuple[Qobj], B: Tuple[Qobj]) -> (float, str):
     return rads, deg_as_str
 
 
-def find_degeneracy(H , precision = 10**-10) -> int:
+def find_degeneracy(H, precision=10 ** -10) -> int:
     """
     Return the degree of the gorundsaoce of H
     :param H: hamitonian either Qobj or hermitian scipy.sparse.csr.csr_matrix
     :param precision: precision parameter, all energies < min(energies)+ precision will be considered ground energies
     :return: dimension of groundspace.
     """
-    if type(H) == qutip.qobj.Qobj :
+    if type(H) == qutip.qobj.Qobj:
         energies = scipy.linalg.eigh(H.data.toarray())[0]
     elif type(H) == scipy.sparse.csr.csr_matrix:
         energies = scipy.linalg.eigh(H.toarray())[0]
-    elif type(H) ==numpy.ndarray:
+    elif type(H) == numpy.ndarray:
         energies = scipy.linalg.eigh(H)[0]
     return sum(abs(energies - energies.min()) < precision)
-
 
 
 def create_vector_from_string(vec_to_build: str) -> Qobj:
@@ -428,6 +428,7 @@ def create_all_even_vectors(n) -> [Qobj]:
             ret.append(create_vector_from_string(binformat))
     return ret
 
+
 def create_all_odd_vectors(n) -> [Qobj]:
     """
     Creates an array of all the vectors in the computational basis with an odd number of 1's
@@ -441,3 +442,33 @@ def create_all_odd_vectors(n) -> [Qobj]:
             ret.append(create_vector_from_string(binformat))
     return ret
 
+
+def proj_on(subspace) -> Qobj:
+    """
+    Creates a projector on the space given
+    :param subspace: if a list of vectors - should find a basis and project onto
+            if a single vector - creates a projector on the it
+    :return: a projection operator on the subspace
+    """
+    if isinstance(subspace, collections.Sequence):
+        # use QR factorization to get an orthogonal basis
+        subspace_mat = np.concatenate([vector.data.toarray() for vector in subspace], axis=1)
+        Q, _ = np.linalg.qr(subspace_mat)
+        proj_arr = Q.dot(Q.T.conj())
+        proj = Qobj(proj_arr,dims=[subspace[0].dims[0]]*2)
+    else:
+        proj = subspace * subspace.trans().conj()
+    return proj
+
+
+def proj_orth(subspace) -> Qobj:
+    """
+    Creates a projector subspace orthogonal to the given subspace in the same Hilbert space
+    :param subspace: if a list of vectors - should find a basis and project onto
+            if a single vector - creates a projector on the it
+    :return: a projection operator on the subspace
+    """
+    proj = proj_on(subspace)
+    Idn = tensor([qeye(2)] * len(proj.dims[0]))
+    orthproj = Idn - proj
+    return orthproj

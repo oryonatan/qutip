@@ -62,6 +62,8 @@ class XXZZham:
         return sum([term.get_commuting_form(self.degree) for term in self.local_terms])
 
 
+
+
 def rotate_to_00_base(oper):
     """
     Assumes matrix of size 2^(2n) where
