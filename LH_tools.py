@@ -450,7 +450,7 @@ def proj_on(subspace) -> Qobj:
             if a single vector - creates a projector on the it
     :return: a projection operator on the subspace
     """
-    if isinstance(subspace, collections.Sequence):
+    if isinstance(subspace, collections.Sequence) or isinstance(subspace,np.ndarray):
         # use QR factorization to get an orthogonal basis
         subspace_mat = np.concatenate([vector.data.toarray() for vector in subspace], axis=1)
         Q, _ = np.linalg.qr(subspace_mat)
