@@ -204,7 +204,7 @@ def gen_random_XXZZham(n:int,rand_range=1)->XXZZham:
     for i in range(1, n + 1):
         for j in range(i + 1, n + 1):
             a = random.uniform(-rand_range, rand_range)
-            terms.append(XXZZham.XXZZ_term(i, j, a))
+            terms.append(XXZZ_term(i, j, a))
     return XXZZham(terms)
 
 
