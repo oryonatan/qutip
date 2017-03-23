@@ -1,5 +1,6 @@
 import sys
 import os
+import random
 
 sys.path.insert(1, os.path.join(sys.path[0], '..'))
 from LH_tools import LocalOperator as LO
@@ -190,3 +191,20 @@ def add_high_energies(oper, big_value) -> qutip.Qobj:
     id_outside[0:small_box_size, 0:small_box_size] = np.zeros((small_box_size, small_box_size))
     oper_ar += id_outside * big_value
     return qutip.Qobj(oper_ar, dims=oper.dims)
+
+
+def gen_random_XXZZham(n:int,rand_range=1)->XXZZham:
+    """
+    Generates a random XXZZ ham on n qubits with parameter -rand_range < a_{ij} < rand_range 
+    :param n: number of qubits in space
+    :param rand_range: bounds for a_{ij}
+    :return: a XXZZ ham
+    """
+    terms = []
+    for i in range(1, n + 1):
+        for j in range(i + 1, n + 1):
+            a = random.uniform(-rand_range, rand_range)
+            terms.append(XXZZham.XXZZ_term(i, j, a))
+    return XXZZham(terms)
+
+
