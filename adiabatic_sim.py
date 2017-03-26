@@ -12,7 +12,7 @@ mkl_rt = ctypes.CDLL('libmkl_rt.so')
 mkl_get_max_threads = mkl_rt.mkl_get_max_threads
 mkl_rt.mkl_set_num_threads(ctypes.byref(ctypes.c_int(48)))
 import os
-
+import time
 
 def sim_simple_adiabatic(tlist, H0, H1, s='linear'):
     """
@@ -857,6 +857,8 @@ def sim_degenerate_adiabatic(tlist, H0: qobj, H1: qobj, psi0: qobj, max_degen=Fa
     :param s: function - relates time to coupling, default is linear dependecy
     :return:
     """
+
+    
     tmin = min(tlist)
     tmax = max(tlist)
     s = lambda t: (t - tmin) / (tmax - tmin)
@@ -873,7 +875,8 @@ def sim_degenerate_adiabatic(tlist, H0: qobj, H1: qobj, psi0: qobj, max_degen=Fa
     P_mat.append(
         [gs_projection])
     oldt = tmin
-
+    
+    
     # # TODO: remove debug
     # #
     # import pydevd
@@ -887,8 +890,12 @@ def sim_degenerate_adiabatic(tlist, H0: qobj, H1: qobj, psi0: qobj, max_degen=Fa
         Ht_energies, HT_ev = Ht.eigenstates(eigvals=max_degen)
         Ht_degeneracy = sum(abs(Ht_energies - Ht_energies.min()) < PRECISION)
         groundspace = HT_ev[0:Ht_degeneracy]
-        U = expm(-1j * Ht.data * dt)
-        psi = Qobj(U * psi.data, dims=psi.dims)
+        start_time = time.time()
+        #U = expm(-1j * Ht.data * dt) use qutip expm for speedup
+        #psi = Qobj(U * psi.data, dims=psi.dims)
+        U = (Ht*-1j*dt).expm()
+        print ("Finished expm in %f" % (time.time() - start_time )); start_time = time.time()
+        psi = U * psi
         psis.append(psi)
         eigvals_mat.append(Ht_energies)
         # gs_projection = sum([abs(groundstate.overlap(psi)) ** 2 for groundstate in groundspace])
