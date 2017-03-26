@@ -64,7 +64,6 @@ class XXZZham:
 
 
 
-
 def rotate_to_00_base(oper):
     """
     Assumes matrix of size 2^(2n) where
@@ -79,14 +78,15 @@ def rotate_to_00_base(oper):
     :return: rotated operator
     """
     space_size = oper.data.shape[0]
-    oper_ar = oper.data.toarray()
-    rotmat = np.zeros_like(oper_ar)
+    rotmat = np.zeros(oper.shape)
     for i in range(space_size):
         j = int((i % np.sqrt(space_size)) * np.sqrt(space_size) \
                 + np.floor(i / np.sqrt(space_size)))
         rotmat[j][i] = 1
-    rotated = rotmat.conj().dot(oper_ar.dot(rotmat))
-    return qutip.Qobj(rotated, dims=oper.dims)
+    rotmat = qutip.Qobj(rotmat, dims= oper.dims)
+    rotated = rotmat.dag() * oper * rotmat
+    return rotated
+
 
 
 def rotate_to_evil_base(oper):
