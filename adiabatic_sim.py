@@ -891,10 +891,7 @@ def sim_degenerate_adiabatic(tlist, H0: qobj, H1: qobj, psi0: qobj, max_degen=Fa
         Ht_degeneracy = sum(abs(Ht_energies - Ht_energies.min()) < PRECISION)
         groundspace = HT_ev[0:Ht_degeneracy]
         start_time = time.time()
-        #U = expm(-1j * Ht.data * dt) use qutip expm for speedup
-        #psi = Qobj(U * psi.data, dims=psi.dims)
         U = (Ht*-1j*dt).expm()
-        print ("Finished expm in %f" % (time.time() - start_time )); start_time = time.time()
         psi = U * psi
         psis.append(psi)
         eigvals_mat.append(Ht_energies)
