@@ -45,9 +45,8 @@ for i in tqdm(range(100)):
     H2_cr_groundspace = H2_cr_ev[0:4]
 
     H1_he_gs = H1_he.eigenstates(eigvals=1)[1][0]
-    projection = LHT.get_total_projection_size(H2_cr_groundspace, H1_he)[0]
-    # print(1/projection)
-    random_projections.append(projection)
+    rand_proj = LHT.get_total_projection_size(H2_cr_groundspace, H1_he_gs)[0]
+    random_projections.append(rand_proj)
 
 print("Median:", 1/np.median(random_projections))
 print("Mean:", 1/np.mean(random_projections))
