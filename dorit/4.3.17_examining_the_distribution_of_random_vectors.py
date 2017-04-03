@@ -40,7 +40,7 @@ number_of_hams_to_try = 250
 random_projections4 = []
 for i in tqdm(range(number_of_hams_to_try)):
     n = 4
-    zer = qutip.basis(2, 0)
+    zer = tensor([qutip.basis(2, 0)] * n )
     IDn = LHT.gen_ID_n(n)
 
     # Generate some random vector
@@ -58,7 +58,7 @@ for i in tqdm(range(number_of_hams_to_try)):
 random_projections8 = []
 for i in tqdm(range(number_of_hams_to_try)):
     n = 8
-    zer = qutip.basis(2, 0)
+    zer = tensor([qutip.basis(2, 0)] * n)
     IDn = LHT.gen_ID_n(n)
 
     # Generate some random vector
