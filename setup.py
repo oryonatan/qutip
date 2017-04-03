@@ -13,5 +13,5 @@ ext_modules = [
 
 setup(
     name='fastexpm',
-    ext_modules=cythonize(ext_modules),
+    ext_modules=cythonize(ext_modules), requires=['qutip']
 )

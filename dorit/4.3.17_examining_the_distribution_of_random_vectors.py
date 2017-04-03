@@ -1,7 +1,7 @@
 import warnings
-
+import matplotlib.pyplot as plt
 import pyximport
-from tqdm import tqdm
+from tqdm import tnrange, tqdm_notebook, tqdm
 
 warnings.filterwarnings('ignore')
 
@@ -10,12 +10,16 @@ import os
 import time
 
 sys.path.insert(0, os.path.join(os.getcwd(), os.pardir))
+from qutip import *
 import numpy as np
 import matplotlib.pyplot as plt
 
 pyximport.install(setup_args={"include_dirs": np.get_include()})
 import XXZZham as XXZZham
 from XXZZham import add_high_energies, rotate_to_00_base
+import random
+import adiabatic_sim as asim
+import time
 
 import multiprocessing
 import ctypes
@@ -23,8 +27,9 @@ import ctypes
 mkl_rt = ctypes.CDLL('libmkl_rt.so')
 mkl_get_max_threads = mkl_rt.mkl_get_max_threads
 mkl_rt.mkl_set_num_threads(ctypes.byref(ctypes.c_int(multiprocessing.cpu_count())))
+import os
 import LH_tools as LHT
-import qutip
+
 
 PRECISION = 2 ** -40
 
