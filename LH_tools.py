@@ -484,13 +484,23 @@ def plot_two_histograms(top_title: str, top_data: list,
     :param buttom_data: 
     :return: figure object
     """
+    round_to = 4
+    props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
     fig = plt.figure()
     top_plot = fig.add_subplot(2, 1, 1)
     top_plot.set_title(top_title)
     top_plot.hist(top_data, 250, color="red")
     top_plot.set_xlim(-0.1, 1.1)
+    text_str = "Median: " + str(round(1 / np.median(top_data), round_to)) +\
+               "\nMean: " + str(round(1 / np.mean(top_data), round_to))
+    top_plot.text(0.65, 0.95, text_str, transform=top_plot.transAxes, fontsize=14,
+                  verticalalignment='top', bbox=props)
     bottom_plt = fig.add_subplot(2, 1, 2)
     bottom_plt.set_title("%s" % bottom_title)
     bottom_plt.hist(buttom_data, 250, color="blue")
     bottom_plt.set_xlim(-0.1, 1.1)
+    text_str = "Median: " + str(round(1 / np.median(buttom_data), round_to)) +\
+               "\nMean: " + str(round(1 / np.mean(buttom_data), round_to))
+    bottom_plt.text(0.65, 0.95, text_str, transform=bottom_plt.transAxes, fontsize=14,
+                    verticalalignment='top', bbox=props)
     return fig

@@ -1,12 +1,13 @@
 import warnings
-import matplotlib.pyplot as plt
+
 import pyximport
-from tqdm import tnrange, tqdm_notebook, tqdm
+from tqdm import tqdm
 
 warnings.filterwarnings('ignore')
 
 import sys
 import os
+import time
 
 sys.path.insert(0, os.path.join(os.getcwd(), os.pardir))
 from qutip import *
@@ -16,9 +17,6 @@ import matplotlib.pyplot as plt
 pyximport.install(setup_args={"include_dirs": np.get_include()})
 import XXZZham as XXZZham
 from XXZZham import add_high_energies, rotate_to_00_base
-import random
-import adiabatic_sim as asim
-import time
 
 import multiprocessing
 import ctypes
@@ -26,17 +24,14 @@ import ctypes
 mkl_rt = ctypes.CDLL('libmkl_rt.so')
 mkl_get_max_threads = mkl_rt.mkl_get_max_threads
 mkl_rt.mkl_set_num_threads(ctypes.byref(ctypes.c_int(multiprocessing.cpu_count())))
-import os
 import LH_tools as LHT
 
 PRECISION = 2 ** -40
 
 # Actual code
-print (sys.argv[0])
-
 
 random_projections = []
-number_of_hams_to_try = 400
+number_of_hams_to_try = 250
 
 for i in tqdm(range(number_of_hams_to_try)):
     n = 4
@@ -79,7 +74,7 @@ LHT.plot_two_histograms("Random hams",
                         random_projections,
                         "Same hamiltonian",
                         same_ham_projections)
-# plt.savefig(time.)
-
+savefile_name = time.strftime("%d.%m.%y:%H:%M:%S",time.gmtime()) + ".png"
+plt.savefig(savefile_name)
 plt.show()
 
