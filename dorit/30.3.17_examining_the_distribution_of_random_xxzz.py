@@ -10,7 +10,6 @@ import os
 import time
 
 sys.path.insert(0, os.path.join(os.getcwd(), os.pardir))
-from qutip import *
 import numpy as np
 import matplotlib.pyplot as plt
 

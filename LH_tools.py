@@ -469,8 +469,7 @@ def proj_orth(subspace) -> Qobj:
     :return: a projection operator on the subspace
     """
     proj = proj_on(subspace)
-    Idn = tensor([qeye(2)] * len(proj.dims[0]))
-    orthproj = Idn - proj
+    orthproj = gen_ID_n(len(proj.dims[0])) - proj
     return orthproj
 
 
@@ -504,3 +503,12 @@ def plot_two_histograms(top_title: str, top_data: list,
     bottom_plt.text(0.65, 0.95, text_str, transform=bottom_plt.transAxes, fontsize=14,
                     verticalalignment='top', bbox=props)
     return fig
+
+
+def gen_ID_n(n=1)->Qobj:
+    """
+    Generates identity on n qubits
+    :param n: number of qubits
+    :return: identity operator
+    """
+    return tensor([qeye(2)] * n)
