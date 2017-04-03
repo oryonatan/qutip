@@ -1,7 +1,7 @@
 import warnings
 import matplotlib.pyplot as plt
 import pyximport
-from tqdm import tnrange, tqdm_notebook,tqdm
+from tqdm import tnrange, tqdm_notebook, tqdm
 
 warnings.filterwarnings('ignore')
 
@@ -32,8 +32,13 @@ import LH_tools as LHT
 PRECISION = 2 ** -40
 
 # Actual code
+print (sys.argv[0])
+
+
 random_projections = []
-for i in tqdm(range(100)):
+number_of_hams_to_try = 400
+
+for i in tqdm(range(number_of_hams_to_try)):
     n = 4
     H1 = XXZZham.gen_random_XXZZham(n, 1)
     H2 = XXZZham.gen_random_XXZZham(n, 1)
@@ -48,7 +53,33 @@ for i in tqdm(range(100)):
     rand_proj = LHT.get_total_projection_size(H2_cr_groundspace, H1_he_gs)[0]
     random_projections.append(rand_proj)
 
-print("Median:", 1/np.median(random_projections))
-print("Mean:", 1/np.mean(random_projections))
-plt.hist(random_projections,250)
+same_ham_projections = []
+for i in tqdm(range(number_of_hams_to_try)):
+    n = 4
+    H = XXZZham.gen_random_XXZZham(n, 1)
+
+    H_he = add_high_energies(rotate_to_00_base(H.get_commuting_term_ham()), 30)
+    H_cr = rotate_to_00_base(H.get_commuting_term_ham())
+
+    H_cr_energies, H_cr_ev = H_cr.eigenstates(eigvals=4)
+    H_cr_groundspace = H_cr_ev[0:4]
+
+    H_he_gs = H_he.eigenstates(eigvals=1)[1][0]
+    rand_proj = LHT.get_total_projection_size(H_cr_groundspace, H_he_gs)[0]
+    same_ham_projections.append(rand_proj)
+
+print("Random hams")
+print("Median:", 1 / np.median(random_projections))
+print("Mean:", 1 / np.mean(random_projections))
+print("Same hamiltonian ")
+print("Median:", 1 / np.median(same_ham_projections))
+print("Mean:", 1 / np.mean(same_ham_projections))
+
+LHT.plot_two_histograms("Random hams",
+                        random_projections,
+                        "Same hamiltonian",
+                        same_ham_projections)
+# plt.savefig(time.)
+
 plt.show()
+

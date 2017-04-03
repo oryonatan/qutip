@@ -450,12 +450,12 @@ def proj_on(subspace) -> Qobj:
             if a single vector - creates a projector on the it
     :return: a projection operator on the subspace
     """
-    if isinstance(subspace, collections.Sequence) or isinstance(subspace,np.ndarray):
+    if isinstance(subspace, collections.Sequence) or isinstance(subspace, np.ndarray):
         # use QR factorization to get an orthogonal basis
         subspace_mat = np.concatenate([vector.data.toarray() for vector in subspace], axis=1)
         Q, _ = np.linalg.qr(subspace_mat)
         proj_arr = Q.dot(Q.T.conj())
-        proj = Qobj(proj_arr,dims=[subspace[0].dims[0]]*2)
+        proj = Qobj(proj_arr, dims=[subspace[0].dims[0]] * 2)
     else:
         proj = subspace * subspace.trans().conj()
     return proj
@@ -472,3 +472,25 @@ def proj_orth(subspace) -> Qobj:
     Idn = tensor([qeye(2)] * len(proj.dims[0]))
     orthproj = Idn - proj
     return orthproj
+
+
+def plot_two_histograms(top_title: str, top_data: list,
+                        bottom_title: str, buttom_data: list) -> plt.Figure:
+    """
+    Plots two hitograms one on another
+    :param top_title: 
+    :param top_data: 
+    :param bottom_title: 
+    :param buttom_data: 
+    :return: figure object
+    """
+    fig = plt.figure()
+    top_plot = fig.add_subplot(2, 1, 1)
+    top_plot.set_title(top_title)
+    top_plot.hist(top_data, 250, color="red")
+    top_plot.set_xlim(-0.1, 1.1)
+    bottom_plt = fig.add_subplot(2, 1, 2)
+    bottom_plt.set_title("%s" % bottom_title)
+    bottom_plt.hist(buttom_data, 250, color="blue")
+    bottom_plt.set_xlim(-0.1, 1.1)
+    return fig
