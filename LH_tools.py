@@ -346,6 +346,23 @@ def make_pair_orthonormal(v1: qobj, v2: qobj) -> (qobj, qobj):
     return a, b
 
 
+# def get_total_projection_size(subspace: Tuple[Qobj], psi: Qobj) -> float:
+#     """
+#     Finds the total projection size over a subspace defined by a list of vectors (not necessarily orthogonal)
+#     :param subspace:
+#     :param psi:
+#     :return:
+#     """
+#     subspace_mat = np.concatenate([vector.data.toarray() for vector in subspace], axis=1)
+#     # use gram shmidt QR factorization
+#     Q, _ = np.linalg.qr(subspace_mat)
+#
+#     projection_vector = np.abs(
+#         Q.transpose().dot(psi.data.toarray())
+#     ) ** 2
+#     return sum(projection_vector)
+
+
 def get_total_projection_size(subspace: Tuple[Qobj], psi: Qobj) -> float:
     """
     Finds the total projection size over a subspace defined by a list of vectors (not necessarily orthogonal)
@@ -358,10 +375,9 @@ def get_total_projection_size(subspace: Tuple[Qobj], psi: Qobj) -> float:
     Q, _ = np.linalg.qr(subspace_mat)
 
     projection_vector = np.abs(
-        Q.transpose().dot(psi.data.toarray())
+        Q.transpose().conjugate().dot(psi.data.toarray())
     ) ** 2
     return sum(projection_vector)
-
 
 # Finds the minimal angle between two subsapces
 # I think
