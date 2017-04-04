@@ -30,7 +30,6 @@ mkl_rt.mkl_set_num_threads(ctypes.byref(ctypes.c_int(multiprocessing.cpu_count()
 import os
 import LH_tools as LHT
 
-
 PRECISION = 2 ** -40
 
 # Actual code
@@ -40,7 +39,7 @@ number_of_hams_to_try = 250
 random_projections4 = []
 for i in tqdm(range(number_of_hams_to_try)):
     n = 4
-    zer = tensor([qutip.basis(2, 0)] * n )
+    zer = tensor([qutip.basis(2, 0)] * n)
     IDn = LHT.gen_ID_n(n)
 
     # Generate some random vector
@@ -84,6 +83,9 @@ LHT.plot_two_histograms("Random hams",
                         random_projections4,
                         "Same hamiltonian",
                         random_projections8)
-savefile_name = time.strftime("%d.%m.%y:%H:%M:%S", time.gmtime()) + ".png"
+savefile_name = "figs/" + time.strftime("%d.%m.%y:%H:%M:%S", time.gmtime()) + ".png"
 plt.savefig(savefile_name)
-plt.show()
+try:
+    plt.show()
+except Exception as e:
+    print("Failed to draw", e)
