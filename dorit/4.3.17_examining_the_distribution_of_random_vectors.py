@@ -2,10 +2,10 @@ import warnings
 import sys
 import os
 import time
-import matplotlib.pyplot as plt
 if "DISPLAY" not in os.environ.keys():
     import matplotlib
     matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 
 import pyximport
 from tqdm import tnrange, tqdm_notebook, tqdm
