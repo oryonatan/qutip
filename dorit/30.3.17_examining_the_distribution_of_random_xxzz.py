@@ -1,13 +1,17 @@
 import warnings
+import sys
+import os
+import time
+if "DISPLAY" not in os.environ.keys():
+    import matplotlib
+    matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+
 import pyximport
 from tqdm import tnrange, tqdm_notebook, tqdm
 
 warnings.filterwarnings('ignore')
 
-import sys
-import os
-import time
 
 sys.path.insert(0, os.path.join(os.getcwd(), os.pardir))
 from qutip import *
@@ -29,7 +33,6 @@ mkl_get_max_threads = mkl_rt.mkl_get_max_threads
 mkl_rt.mkl_set_num_threads(ctypes.byref(ctypes.c_int(multiprocessing.cpu_count())))
 import os
 import LH_tools as LHT
-
 PRECISION = 2 ** -40
 
 # Actual code
@@ -74,11 +77,11 @@ print("Same hamiltonian ")
 print("Median:", 1 / np.median(same_ham_projections))
 print("Mean:", 1 / np.mean(same_ham_projections))
 
-LHT.plot_two_histograms("Random hams",
+LHT.plot_two_histograms("Random hams 4/8Q",
                         random_projections,
-                        "Same hamiltonian",
+                        "Same hamiltonian 4/8Q",
                         same_ham_projections)
-savefile_name = time.strftime("%d.%m.%y:%H:%M:%S",time.gmtime()) + ".png"
+
+savefile_name = "figs/" + time.strftime("%d.%m.%y:%H:%M:%S", time.gmtime()) + ".png"
 plt.savefig(savefile_name)
 plt.show()
-

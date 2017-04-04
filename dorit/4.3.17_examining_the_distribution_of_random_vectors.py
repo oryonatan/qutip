@@ -83,9 +83,9 @@ print("Same hamiltonian ")
 print("Median:", 1 / np.median(random_projections8))
 print("Mean:", 1 / np.mean(random_projections8))
 
-LHT.plot_two_histograms("Random hams",
+LHT.plot_two_histograms("Random vectors and subspace 4Q",
                         random_projections4,
-                        "Same hamiltonian",
+                        "Random vectors and subspace 8Q",
                         random_projections8)
 savefile_name = "figs/" + time.strftime("%d.%m.%y:%H:%M:%S", time.gmtime()) + ".png"
 plt.savefig(savefile_name)
