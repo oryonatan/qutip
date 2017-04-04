@@ -1,13 +1,17 @@
 import warnings
+import sys
+import os
+import time
 import matplotlib.pyplot as plt
+if "DISPLAY" not in os.environ.keys():
+    import matplotlib
+    matplotlib.use("Agg")
+
 import pyximport
 from tqdm import tnrange, tqdm_notebook, tqdm
 
 warnings.filterwarnings('ignore')
 
-import sys
-import os
-import time
 
 sys.path.insert(0, os.path.join(os.getcwd(), os.pardir))
 from qutip import *
@@ -85,7 +89,4 @@ LHT.plot_two_histograms("Random hams",
                         random_projections8)
 savefile_name = "figs/" + time.strftime("%d.%m.%y:%H:%M:%S", time.gmtime()) + ".png"
 plt.savefig(savefile_name)
-try:
-    plt.show()
-except Exception as e:
-    print("Failed to draw", e)
+plt.show()
