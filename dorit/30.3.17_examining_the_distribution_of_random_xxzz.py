@@ -2,8 +2,10 @@ import warnings
 import sys
 import os
 import time
+
 if "DISPLAY" not in os.environ.keys():
     import matplotlib
+
     matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
@@ -11,7 +13,6 @@ import pyximport
 from tqdm import tnrange, tqdm_notebook, tqdm
 
 warnings.filterwarnings('ignore')
-
 
 sys.path.insert(0, os.path.join(os.getcwd(), os.pardir))
 from qutip import *
@@ -33,6 +34,7 @@ mkl_get_max_threads = mkl_rt.mkl_get_max_threads
 mkl_rt.mkl_set_num_threads(ctypes.byref(ctypes.c_int(multiprocessing.cpu_count())))
 import os
 import LH_tools as LHT
+
 PRECISION = 2 ** -40
 
 # Actual code

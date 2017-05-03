@@ -152,7 +152,7 @@ def evil_base_get_next_number(base_len):
             if overflow :
                 right_part,_ = inc_binary_string(right_part)
                 if not "0" in right_part:
-                    break
+                    break   
         else:
             right_part, _ = inc_binary_string(right_part)
 

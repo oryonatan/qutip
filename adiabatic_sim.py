@@ -848,7 +848,6 @@ Degeneracy evolution
 """
 PRECISION = 2 ** -40
 
-
 def sim_degenerate_adiabatic(tlist, H0: qobj, H1: qobj, psi0: qobj, max_degen=False):
     """
     Simulates evolution under hamiltonians with degenerate GS

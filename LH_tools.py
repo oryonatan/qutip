@@ -379,6 +379,7 @@ def get_total_projection_size(subspace: Tuple[Qobj], psi: Qobj) -> float:
     ) ** 2
     return sum(projection_vector)
 
+
 # Finds the minimal angle between two subsapces
 # I think
 
@@ -506,7 +507,7 @@ def plot_two_histograms(top_title: str, top_data: list,
     top_plot.set_title(top_title)
     top_plot.hist(top_data, 250, color="red")
     top_plot.set_xlim(-0.1, 1.1)
-    text_str = "Median: " + str(round(1 / np.median(top_data), round_to)) +\
+    text_str = "Median: " + str(round(1 / np.median(top_data), round_to)) + \
                "\nMean: " + str(round(1 / np.mean(top_data), round_to))
     top_plot.text(0.65, 0.95, text_str, transform=top_plot.transAxes, fontsize=14,
                   verticalalignment='top', bbox=props)
@@ -514,17 +515,26 @@ def plot_two_histograms(top_title: str, top_data: list,
     bottom_plt.set_title("%s" % bottom_title)
     bottom_plt.hist(buttom_data, 250, color="blue")
     bottom_plt.set_xlim(-0.1, 1.1)
-    text_str = "Median: " + str(round(1 / np.median(buttom_data), round_to)) +\
+    text_str = "Median: " + str(round(1 / np.median(buttom_data), round_to)) + \
                "\nMean: " + str(round(1 / np.mean(buttom_data), round_to))
     bottom_plt.text(0.65, 0.95, text_str, transform=bottom_plt.transAxes, fontsize=14,
                     verticalalignment='top', bbox=props)
     return fig
 
 
-def gen_ID_n(n=1)->Qobj:
+def gen_ID_n(n=1) -> Qobj:
     """
     Generates identity on n qubits
     :param n: number of qubits
     :return: identity operator
     """
     return tensor([qeye(2)] * n)
+
+
+def n_qubit_oper_dims(n: int) -> [[], []]:
+    """
+    Returns the dims of an n qubits operator
+    :param n: number of qubits to oper on
+    :return: array of dimensions
+    """
+    return [[2] * n, [2] * n]
