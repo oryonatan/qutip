@@ -8,6 +8,7 @@ import multiprocessing
 import concurrent.futures
 
 import ctypes
+
 mkl_rt = ctypes.CDLL('libmkl_rt.so')
 mkl_get_max_threads = mkl_rt.mkl_get_max_threads
 mkl_rt.mkl_set_num_threads(ctypes.byref(ctypes.c_int(48)))
@@ -848,6 +849,7 @@ Degeneracy evolution
 """
 PRECISION = 2 ** -40
 
+
 def sim_degenerate_adiabatic(tlist, H0: qobj, H1: qobj, psi0: qobj, max_degen=False):
     """
     Simulates evolution under hamiltonians with degenerate GS
@@ -858,7 +860,6 @@ def sim_degenerate_adiabatic(tlist, H0: qobj, H1: qobj, psi0: qobj, max_degen=Fa
     :return:
     """
 
-    
     tmin = min(tlist)
     tmax = max(tlist)
     s = lambda t: (t - tmin) / (tmax - tmin)
@@ -875,8 +876,7 @@ def sim_degenerate_adiabatic(tlist, H0: qobj, H1: qobj, psi0: qobj, max_degen=Fa
     P_mat.append(
         [gs_projection])
     oldt = tmin
-    
-    
+
     # # TODO: remove debug
     # #
     # import pydevd
@@ -891,7 +891,7 @@ def sim_degenerate_adiabatic(tlist, H0: qobj, H1: qobj, psi0: qobj, max_degen=Fa
         Ht_degeneracy = sum(abs(Ht_energies - Ht_energies.min()) < PRECISION)
         groundspace = HT_ev[0:Ht_degeneracy]
         start_time = time.time()
-        U = (Ht*-1j*dt).expm()
+        U = (Ht * -1j * dt).expm()
         psi = U * psi
         psis.append(psi)
         eigvals_mat.append(Ht_energies)
@@ -971,7 +971,8 @@ def sim_degenerate_adiabatic(tlist, H0: qobj, H1: qobj, psi0: qobj, max_degen=Fa
 #
 
 
-def find_min_gap(H0: Qobj, H1: Qobj, low=0, high=1, epsilon=2 ** (-20), initial_resolution=50,max_threads = None) -> float:
+def find_min_gap(H0: Qobj, H1: Qobj, low=0, high=1, epsilon=2 ** (-20), initial_resolution=50,
+                 max_threads=None) -> float:
     """
     Finds the minimal gap on the convex H0*(1-s)+H1*s between the energies indexed in low and high
     default - find the gap between the lowest and second lowest energies
@@ -981,7 +982,7 @@ def find_min_gap(H0: Qobj, H1: Qobj, low=0, high=1, epsilon=2 ** (-20), initial_
     :param low: index of low energy
     :param high:index of higi energy
     :param epsilon: convergence
-    :return: the lowest energy found
+    :return: (the lowest energy found , argmin s for gap in convex combination H0(1-s) + H1(s)  
     """
     # random sample over the convex initial_resolution points
     slist = [np.random.uniform() for i in range(initial_resolution)]
@@ -1016,7 +1017,7 @@ def __find_local_gap_minimum(s: float, H0: Qobj, H1: Qobj, low=0, high=1, epsilo
             ds = -ds / 2
         s = s + ds
         # handle overflows
-        if s > 1 or s < 0 :
+        if s > 1 or s < 0:
             s = round(s)
             gap_s = __get_gap(s, H0, H1, low, high)
             gap_s_ds = gap_s
@@ -1040,3 +1041,33 @@ def __get_gap(s, H0, H1, low, high) -> float:
     Hs = H0 * (1 - s) + H1 * s
     Hs_en = Hs.eigenenergies(eigvals=high + 1)
     return Hs_en[high] - Hs_en[low]
+
+
+def find_global_adiabatic_rate(H0, H1, maxtime, adiabatic_steps=256, precision=128, min_fidelity=0.99) -> float:
+    """
+    Brute force binary test for adiabacity
+    :param H0: the first hamiltonian
+    :param H1: the second hamiltonian
+    :param maxtime: maximum evolution time
+    :param adiabatic_steps: simulation steps 
+    :param precision: minimal fraction of the maximal time
+    :param min_fidelity: 
+    :return: float the minimal time required for constant-speed adiabatic evolution 
+    """
+    # round to next power of 2
+    psi0 = H0.eigenstates(eigvals=0)[1][0]
+    precision = 2 ** np.ceil(np.log2(precision))
+    times = np.linspace(maxtime / precision, maxtime, precision)
+
+    # Begin binary search
+    evaluate_in = len(times) / 2
+    for i in range(int(np.log2(precision)) - 1):
+        time_for_process = times[evaluate_in]
+        tlist = np.linspace(0, time_for_process, adiabatic_steps)
+        P_mat, _, _ = sim_degenerate_adiabatic(tlist, H0, H1, psi0)
+        # Check if process was adiabatic
+        if P_mat[-1][0] >= min_fidelity:
+            evaluate_in -= len(times) / 2 ** (i + 2)
+        else:
+            evaluate_in += len(times) / 2 ** (i + 2)
+    return times[evaluate_in]
