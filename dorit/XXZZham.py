@@ -208,3 +208,16 @@ def gen_random_XXZZham(n:int,rand_range=1)->XXZZham:
     return XXZZham(terms)
 
 
+def gen_constant_XXZZham(n:int,a=1)->XXZZham:
+    """
+    Generates a random XXZZ ham on n qubits with parameter -rand_range < a_{ij} < rand_range 
+    :param n: number of qubits in space
+    :param rand_range: bounds for a_{ij}
+    :return: a XXZZ ham
+    """
+    terms = []
+    for i in range(1, n + 1):
+        for j in range(i + 1, n + 1):
+            terms.append(XXZZ_term(i, j, a))
+    return XXZZham(terms)
+

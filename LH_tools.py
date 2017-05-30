@@ -10,6 +10,7 @@ import scipy.linalg
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
+from IPython.display import Latex
 
 from qutip import Qobj
 from typing import Tuple
@@ -538,3 +539,25 @@ def n_qubit_oper_dims(n: int) -> [[], []]:
     :return: array of dimensions
     """
     return [[2] * n, [2] * n]
+
+def braketify(state: Qobj, rounding = 4, epsilon = 0.001) -> None:
+    """
+    Prints a Qobj using latex
+    """
+    output_string = "$"
+    state_size = int(np.log2(state.shape[0]))
+    for index,point in enumerate(state):
+        data = point[0][0]
+        if abs(np.real(data)) > epsilon:
+            if abs(np.imag(data)) > epsilon:
+                output_string += "(" + str(np.round(data,decimals=rounding)) + ")"
+            else:
+                output_string += str(np.round(np.real(data),decimals=rounding))
+        elif abs(np.imag(data)) > epsilon:
+            output_string += str(np.round(np.imag(data),decimals=rounding)) + "i"
+        else: 
+            continue
+        output_string += r"\left|" +bin(index)[2:].zfill(state_size) +r"\right>\  "
+    output_string = Latex(output_string + "$")
+    return output_string
+            
