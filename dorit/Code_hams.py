@@ -89,3 +89,5 @@ def generate_noised_hamiltonian(from_code: BinaryCode, noise_magnitude: float):
         noise = noise_magnitude *random.random() * random.randrange(-1, 2, 2)
         ham[i, i] = hamming_weight + noise
     return Qobj(ham, dims=LHT.n_qubit_oper_dims(m)), min_hamming
+
+

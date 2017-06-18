@@ -540,30 +540,55 @@ def n_qubit_oper_dims(n: int) -> [[], []]:
     """
     return [[2] * n, [2] * n]
 
-def braketify(state: Qobj, rounding = 4, epsilon = 0.001) -> None:
+
+def braketify(state: Qobj, rounding=4, epsilon=0.001) -> None:
     """
     Prints a Qobj using latex
     """
     output_string = "$"
     state_size = int(np.log2(state.shape[0]))
     first_item = True
-    for index,point in enumerate(state):
+    for index, point in enumerate(state):
         data = point[0][0]
         if abs(np.real(data)) > epsilon:
-            if np.real(data) > 0  and not first_item :
+            if np.real(data) > 0 and not first_item:
                 output_string += "+"
             if abs(np.imag(data)) > epsilon:
-                output_string += "(" + str(np.round(data,decimals=rounding)) + ")"
+                output_string += "(" + str(np.round(data, decimals=rounding)) + ")"
             else:
-                output_string += str(np.round(np.real(data),decimals=rounding))
+                output_string += str(np.round(np.real(data), decimals=rounding))
         elif abs(np.imag(data)) > epsilon:
-            if np.imag(data) > 0  and not first_item :
+            if np.imag(data) > 0 and not first_item:
                 output_string += "+"
-            output_string += str(np.round(np.imag(data),decimals=rounding)) + "i"
-        else: 
+            output_string += str(np.round(np.imag(data), decimals=rounding)) + "i"
+        else:
             continue
         first_item = False
-        output_string += r"\left|" +bin(index)[2:].zfill(state_size) +r"\right> \qquad "
+        output_string += r"\left|" + bin(index)[2:].zfill(state_size) + r"\right> \qquad "
     output_string = Latex(output_string[:-1] + "$")
     return output_string
-            
+
+
+def complete_space(start_vectors: [Qobj]) -> [Qobj]:
+    """
+    Uses the vectors (v0...vi)in the list Qobj to complete a basis with b0...bi = vo...vi
+    :param start_vectors:
+    :return: a basis
+    """
+    space_vectors = start_vectors.copy()
+    n = len(start_vectors[0].dims[0])
+    N = int(2 ** n)
+    zero_n = tensor([basis(2, 0)] * n)
+    ID_n = gen_ID_n(n)
+    for i in range(N - len(start_vectors)):
+        rand_vector = rand_unitary(N, dims=ID_n.dims) * zero_n
+        space_vectors.append(rand_vector)
+    A = np.concatenate([vector.data.toarray() for vector in space_vectors], axis=1)
+    Q, _ = np.linalg.qr(A)
+    if (np.linalg.matrix_rank(A) < N):
+        raise ValueError("Random matrix of rank < N, maybe some of the starting vectors are parallel?")
+    return_space = []
+    for i in range(N):
+        bi = Q[:,i]
+        return_space.append(Qobj(bi, dims = start_vectors[0].dims))
+    return return_space
