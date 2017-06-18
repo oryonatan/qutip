@@ -546,18 +546,24 @@ def braketify(state: Qobj, rounding = 4, epsilon = 0.001) -> None:
     """
     output_string = "$"
     state_size = int(np.log2(state.shape[0]))
+    first_item = True
     for index,point in enumerate(state):
         data = point[0][0]
         if abs(np.real(data)) > epsilon:
+            if np.real(data) > 0  and not first_item :
+                output_string += "+"
             if abs(np.imag(data)) > epsilon:
                 output_string += "(" + str(np.round(data,decimals=rounding)) + ")"
             else:
                 output_string += str(np.round(np.real(data),decimals=rounding))
         elif abs(np.imag(data)) > epsilon:
+            if np.imag(data) > 0  and not first_item :
+                output_string += "+"
             output_string += str(np.round(np.imag(data),decimals=rounding)) + "i"
         else: 
             continue
-        output_string += r"\left|" +bin(index)[2:].zfill(state_size) +r"\right>\  "
-    output_string = Latex(output_string + "$")
+        first_item = False
+        output_string += r"\left|" +bin(index)[2:].zfill(state_size) +r"\right> \qquad "
+    output_string = Latex(output_string[:-1] + "$")
     return output_string
             
