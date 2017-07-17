@@ -43,7 +43,7 @@ def sim_simple_adiabatic(tlist, H0, H1, s='linear'):
          abs(eigvecs[1].overlap(psi)) ** 2])
     oldt = tmin
     for t in tlist[1:]:
-        dt = oldt - t
+        dt = abs(oldt - t)
         Ht = H0 * (1 - s(t)) + H1 * (s(t))
         eigvals, eigvecs = Ht.eigenstates(eigvals=2)
         U = expm(-1j * Ht.data * dt)
