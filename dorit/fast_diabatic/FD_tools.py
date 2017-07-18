@@ -95,6 +95,34 @@ def _create_back_and_forward_props_sfunction(s, tlist, H_0, H_1):
         last_time = i_t
     return backprop, prop
 
+def _create_back_and_forward_props_slist(slist, tlist, H_0, H_1):
+    """
+    Creates a back and forwared propagators
+    :param tlist:
+    :param H_0:
+    :param H_1:
+    :return:
+    """
+    n = len(H_0.dims[0])
+    prop = tensor([qeye(2)] * n)
+    tmax = max(tlist)
+    last_time = 0
+    for time, s_t in zip(tlist, slist):
+        dt = abs(time - last_time)
+        Hs = H_0 * (1 - s_t) + H_1 * s_t
+        U = (-1j * Hs * dt).expm()
+        prop = U * prop
+        last_time = time
+    backprop = tensor([qeye(2)] * n)
+    #inverse time and s
+    for i_t ,i_s in zip(tlist[-2::-1], slist[-2::-1]):
+        dt = abs(i_t - last_time)
+        Hs = H_0 * (1-i_s) + H_1 * i_s
+        U = (-1j * Hs * dt).expm()
+        backprop = U * backprop
+        last_time = i_t
+    return backprop, prop
+
 def _simulate_time_p_and_pfab(T: float, steps: int, psi0: Qobj, psi1: Qobj, H0: Qobj, H1: Qobj):
 
     """
@@ -114,3 +142,4 @@ def _simulate_time_p_and_pfab(T: float, steps: int, psi0: Qobj, psi1: Qobj, H0: 
     Pf0 = abs(psi1.overlap(psi_forward)) ** 2
     Pfab = abs(psi0.overlap(psi_fab)) ** 2
     return T, Pf0, Pfab
+
