@@ -66,7 +66,7 @@ def create_back_and_forward_props(tlist, H_0, H_1):
     return backprop, prop
 
 
-def create_back_and_forward_props_sfunction(s, tlist, H_0, H_1):
+def _create_back_and_forward_props_sfunction(s, tlist, H_0, H_1):
     """
     Creates a back and forwared propagators
     :param tlist:
@@ -85,18 +85,18 @@ def create_back_and_forward_props_sfunction(s, tlist, H_0, H_1):
         U = (-1j * Hs * dt).expm()
         prop = U * prop
         last_time = time
-    last_time = 0
     backprop = tensor([qeye(2)] * n)
-    for time, s_t in zip(tlist[1::-1], slist[1::-1]):
-        dt = abs(time - last_time)
-        Hs = H_0 * (1 - s_t) + H_1 * s_t
+    #inverse time and s
+    for i_t ,i_s in zip(tlist[-2::-1], slist[-2::-1]):
+        dt = abs(i_t - last_time)
+        Hs = H_0 * (1-i_s) + H_1 * i_s
         U = (-1j * Hs * dt).expm()
         backprop = U * backprop
-        last_time = time
+        last_time = i_t
     return backprop, prop
 
-
 def _simulate_time_p_and_pfab(T: float, steps: int, psi0: Qobj, psi1: Qobj, H0: Qobj, H1: Qobj):
+
     """
         Callback for simulation of fowrard and backword propagation
     :param T:
